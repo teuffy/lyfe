@@ -4,9 +4,12 @@ cabal-version:  >=1.2
 build-type:     Simple
 author:         pl186036
 
-executable Monads
-  hs-source-dirs:  src
-  main-is:         ChapterTwo.hs
+library 
   build-depends:   base >= 4
   ghc-options:     -Wall
+  other-modules:   
+                   ChapterThree,
+                   ChapterTwo
+
+
 
