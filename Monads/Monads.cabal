@@ -1,0 +1,12 @@
+name:           Monads
+version:        0.1
+cabal-version:  >=1.2
+build-type:     Simple
+author:         pl186036
+
+executable Monads
+  hs-source-dirs:  src
+  main-is:         ChapterTwo.hs
+  build-depends:   base >= 4
+  ghc-options:     -Wall
+
