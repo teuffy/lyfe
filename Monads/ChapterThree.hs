@@ -27,7 +27,6 @@ mothersPaternalGrandfather s = do m <- mother s
                                   father gf
 -- mothersPaternalGrandfather s = do { m <- mother s; gf <- father m; father gf }
 
--- without do syntactic sugar
 -- mothersPaternalGrandfather s = mother s >>= (\m ->
 --                               father m >>= (\gf ->
 --                                father gf))
