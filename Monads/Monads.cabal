@@ -9,7 +9,9 @@ library
   ghc-options:     -Wall
   other-modules:   
                    ChapterThree,
-                   ChapterTwo
+                   ChapterTwo,
+                   ChapterFour,
+                   ChapterFive
 
 
 

@@ -19,3 +19,15 @@ maternalGrandfather s = (return s) >>= mother >>= father
 
 fathersMaternalGrandmother :: Sheep -> Maybe Sheep
 fathersMaternalGrandmother s = (return s) >>= father >>= mother >>= mother
+
+-- we can also use do notation to build readable and complicated sequences
+mothersPaternalGrandfather :: Sheep -> Maybe Sheep
+mothersPaternalGrandfather s = do m <- mother s
+                                  gf <- father m
+                                  father gf
+-- mothersPaternalGrandfather s = do { m <- mother s; gf <- father m; father gf }
+
+-- without do syntactic sugar
+-- mothersPaternalGrandfather s = mother s >>= (\m ->
+--                               father m >>= (\gf ->
+--                                father gf))
