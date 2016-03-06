@@ -24,6 +24,5 @@ public abstract class CachedFactorizer implements Servlet {
       ++hits;
       ++cacheHits;
     }
-
   }
 }
