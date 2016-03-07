@@ -36,7 +36,7 @@ getHomeR = defaultLayout [whamlet|
                                 Next time we will be #{(*) 2 (peopleCount creators)} strong!
                         |]
                         where
-                            creators = Creators "Haskell 101 - course"
+                            creators = Creators "Haskell 101 - course" 5
 
 data User = User { username :: Text, password :: Text }
 userAForm :: AForm Handler User
