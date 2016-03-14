@@ -6,6 +6,7 @@
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 module FirstYesodApp where
 
@@ -100,6 +101,8 @@ postNewPostingR = do
 getListAdsR :: Handler Html
 getListAdsR = undefined
 
+getAdPostingR :: Handler Html
+getAdPostingR = undefined
 
 main :: IO ()
 main = do
