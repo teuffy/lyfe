@@ -8,7 +8,7 @@ executable Yesod
   hs-source-dirs:  
   main-is:         FirstYesodApp.hs
   build-depends:   
-                   base >= 4,
+                   base,
                    yesod >=1.4 && <1.5,
                    persistent,
                    text,

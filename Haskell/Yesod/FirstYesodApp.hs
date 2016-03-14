@@ -12,15 +12,13 @@ module FirstYesodApp where
 import           Control.Applicative     ((<$>), (<*>))
 import           Data.List               (sort)
 import           Data.Text
-import           Data.Text
 import           Database.Persist
 import           Database.Persist.Sqlite
-import           Database.Persist.TH
 import           Yesod
 import Control.Monad.Trans.Resource (runResourceT)
 import Control.Monad.Logger (runStderrLoggingT)
 
-share [mkPersist sqlSettings, mkSave "entityDefs"]
+share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
     [persistLowerCase|
            AdPosting
             title Text
@@ -30,22 +28,19 @@ share [mkPersist sqlSettings, mkSave "entityDefs"]
             deriving Show
     |]
 
--- createPersistenceModule :: IO ()
--- createPersistenceModule = runSqlite ":memory:" $ do
---    runMigration $ migrate entityDefs $ entityDef (Nothing :: Maybe AdPosting)
-
 data FirstYesodApp = FirstYesodApp ConnectionPool
 
 mkYesod "FirstYesodApp" [parseRoutes|
 / HomeR GET
 /addposting NewPostingR GET POST
+/listadds ListAdsR GET
+/posting/#AdPostingId AdPostingR GET
 |]
 
 instance Yesod FirstYesodApp
 
 instance YesodPersist FirstYesodApp where
     type YesodPersistBackend FirstYesodApp = SqlBackend
-
     runDB action = do
         FirstYesodApp pool <- getYesod
         runSqlPool action pool
@@ -95,16 +90,19 @@ postNewPostingR = do
     ((result, _), _) <- runFormPost adPostingForm
     case result of
         FormSuccess adPosting -> do
-            defaultLayout
-                [whamlet|
-                #{show adPosting}
-                |]
+            adPostingId <- runDB $ insert adPosting
+            redirect $ AdPostingR adPostingId
         _ -> defaultLayout
          [whamlet|
-         <p> sth went wrong
+         <p> Something went rong m8
          |]
+
+getListAdsR :: Handler Html
+getListAdsR = undefined
 
 
 main :: IO ()
-main = runStderrLoggingT $ withSqlitePool "test.db3" 10 $ \pool -> liftIO $ do
+main = do
+    pool <- runStderrLoggingT $ createSqlitePool "test.db3" 10
+    runSqlPersistMPool (runMigration migrateAll) pool
     warp 3000 $ FirstYesodApp pool
