@@ -5,10 +5,18 @@ build-type:     Simple
 author:         navaro1
 
 executable Yesod
-  hs-source-dirs:  src
-  main-is:         HelloWorld.hs
+  hs-source-dirs:  
+  main-is:         FirstYesodApp.hs
   build-depends:   
                    base >= 4,
-                   yesod >=1.4 && <1.5
+                   yesod >=1.4 && <1.5,
+                   persistent,
+                   text,
+                   persistent-sqlite,
+                   persistent-template,
+                   transformers,
+                   monad-logger,
+                   resourcet
+                   
   ghc-options:     -Wall
 
