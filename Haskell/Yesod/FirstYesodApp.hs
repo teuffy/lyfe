@@ -4,20 +4,20 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE TypeFamilies, ViewPatterns               #-}
 
 module FirstYesodApp where
 
-import           Control.Applicative     ((<$>), (<*>))
-import           Data.List               (sort)
+import           Control.Applicative          ((<$>), (<*>))
+import           Control.Monad.Logger         (runStderrLoggingT)
+import           Control.Monad.Trans.Resource (runResourceT)
+import           Data.List                    (sort)
 import           Data.Text
 import           Database.Persist
 import           Database.Persist.Sqlite
 import           Yesod
-import Control.Monad.Trans.Resource (runResourceT)
-import Control.Monad.Logger (runStderrLoggingT)
 
 share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
     [persistLowerCase|
@@ -99,10 +99,27 @@ postNewPostingR = do
          |]
 
 getListAdsR :: Handler Html
-getListAdsR = undefined
+getListAdsR = do
+    ads <- runDB $ selectList [] [Desc AdPostingId]
+    defaultLayout
+        [whamlet|
+            <ul>
+            $forall ad <- ads
+                <li>#{show ad}
+         |]
 
-getAdPostingR :: Handler Html
-getAdPostingR = undefined
+getAdPostingR :: AdPostingId -> Handler Html
+getAdPostingR adPostingId = do
+    adEntity <- runDB $ selectList [AdPostingId ==. adPostingId] []
+    defaultLayout
+        [whamlet|
+            <p>#{show adEntity}
+            <p>#{adPostingTitle $ extractFromEntity adEntity}
+        |] where
+            extractFromEntity :: [(Entity a)] -> a
+            extractFromEntity [(Entity _ a)] = a
+        
+
 
 main :: IO ()
 main = do
