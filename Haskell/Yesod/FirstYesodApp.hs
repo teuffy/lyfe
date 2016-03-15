@@ -14,16 +14,17 @@ import           Control.Applicative          ((<$>), (<*>))
 import           Control.Monad.Logger         (runStderrLoggingT)
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Data.List                    (sort)
-import           Data.Text
+import           Data.Text hiding (null)
 import           Database.Persist
 import           Database.Persist.Sqlite
 import           Yesod
+import           Text.Lucius (luciusFile)
 
 share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
     [persistLowerCase|
            AdPosting
             title Text
-            description Text
+            description Textarea
             contactEmail Text Maybe
             price Double Maybe
             deriving Show
@@ -52,18 +53,19 @@ instance RenderMessage FirstYesodApp FormMessage where
 data Creators = Creators { courseName :: String, peopleCount :: Int }
 navbar :: Widget
 navbar = do
+    toWidget $(luciusFile "luciusFile.lucius")
     toWidget
         [hamlet|
             <div #navbar>
                 <a href=@{HomeR}>Main Page</a> / #
                 <a href=@{NewPostingR}>Add new ad</a> / #
-                <a href=@{ListAdsR}>List current ads</a> / #
+                <a href=@{ListAdsR}>List current ads</a>
         |]
 footer :: Widget
 footer = do
     toWidget
         [hamlet|
-            <footer>
+            <footer #footer>
                 <p>This site was created by #{courseName creators}
                 \ Why not sort our name? #{sort (courseName creators)}
                 \ We are #{peopleCount creators} strong #
@@ -85,7 +87,7 @@ getHomeR = defaultLayout [whamlet|
 adPostingAForm :: AForm Handler AdPosting
 adPostingAForm = AdPosting
     <$> areq textField "Title" Nothing
-    <*> areq textField "Description" Nothing
+    <*> areq textareaField "Description" Nothing
     <*> aopt emailField "Contact Email" Nothing
     <*> aopt doubleField "Price" Nothing
 
@@ -116,35 +118,44 @@ postNewPostingR = do
          <p> Something went wrong m8
          |]
 
+adContainerWidget :: AdPosting -> Widget
+adContainerWidget (AdPosting title desc maybeEmail maybePrice) = do
+    toWidget
+        [hamlet|
+             <div #adPosting>
+                <div #adTitle> #{title}
+                <div #adContent> #{desc}
+                <div #adFooter>
+                $maybe email <- maybeEmail
+                    <span #adEmail> #{show email}
+                $maybe price <- maybePrice
+                     <span #adPrice> #{show price}
+        |]
 getListAdsR :: Handler Html
 getListAdsR = do
     ads <- runDB $ selectList [] [Desc AdPostingId]
     defaultLayout
         [whamlet|
             ^{navbar}
-            <ul>
-            $forall ad <- ads
-                <li>#{show ad}
+            $if null ads
+                <h1>SORRY! NO ADS YET!
+            $else
+                $forall Entity _ (AdPosting title desc maybeEmail maybePrice) <- ads
+                    ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
             ^{footer}
          |]
 
 getAdPostingR :: AdPostingId -> Handler Html
 getAdPostingR adPostingId = do
-    [Entity _ (AdPosting title desc email price)] <- runDB $ selectList [AdPostingId ==. adPostingId] []
+    [Entity _ (AdPosting title desc maybeEmail maybePrice)] <- runDB $ selectList [AdPostingId ==. adPostingId] []
     defaultLayout
         [whamlet|
             ^{navbar}
-            <p>#{title}
-            <p>#{desc}
-            <p>#{show email}
-            <p>#{show price}
+            ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
             ^{footer}
         |] where
             extractFromEntity :: [(Entity a)] -> a
             extractFromEntity [(Entity _ a)] = a
-
-
-
 main :: IO ()
 main = do
     pool <- runStderrLoggingT $ createSqlitePool "test.db3" 10
