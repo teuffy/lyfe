@@ -6,9 +6,9 @@
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies, ViewPatterns               #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ViewPatterns               #-}
 
-module FirstYesodApp where
 
 import           Control.Applicative          ((<$>), (<*>))
 import           Control.Monad.Logger         (runStderrLoggingT)
@@ -46,25 +46,41 @@ instance YesodPersist FirstYesodApp where
         FirstYesodApp pool <- getYesod
         runSqlPool action pool
 
-
 instance RenderMessage FirstYesodApp FormMessage where
     renderMessage _ _ = defaultFormMessage
 
 data Creators = Creators { courseName :: String, peopleCount :: Int }
+navbar :: Widget
+navbar = do
+    toWidget
+        [hamlet|
+            <div #navbar>
+                <a href=@{HomeR}>Main Page</a> / #
+                <a href=@{NewPostingR}>Add new ad</a> / #
+                <a href=@{ListAdsR}>List current ads</a> / #
+        |]
+footer :: Widget
+footer = do
+    toWidget
+        [hamlet|
+            <footer>
+                <p>This site was created by #{courseName creators}
+                \ Why not sort our name? #{sort (courseName creators)}
+                \ We are #{peopleCount creators} strong #
+                Next time we will be #{(*) 2 (peopleCount creators)} strong!
+        |]
+        where creators = Creators "Haskell 101 - course" 5
 getHomeR :: Handler Html
 getHomeR = defaultLayout [whamlet|
                             <head>
                                 <title>Functional Ads!
-                            <div #navbar> <a href=@{NewPostingR}>Create new account</a>
+                            ^{navbar}
                             <h1> Welcome to our first Yesod application!
-                            <footer>
-                                <p>This site was created by #{courseName creators}
-                                \ Why not sort our name? #{sort (courseName creators)}
-                                \ We are #{peopleCount creators} strong #
-                                Next time we will be #{(*) 2 (peopleCount creators)} strong!
+                            <div #container>
+                                Welcome to our magnificent site in which everything is done in Haskell!
+                                Why? Because it causes pleasureable headaches and makes you rethink a lot of stuff!
+                            ^{footer}
                         |]
-                        where
-                            creators = Creators "Haskell 101 - course" 5
 
 adPostingAForm :: AForm Handler AdPosting
 adPostingAForm = AdPosting
@@ -78,12 +94,14 @@ adPostingForm = renderTable adPostingAForm
 
 getNewPostingR :: Handler Html
 getNewPostingR = do
-    (widget, enctype) <- generateFormPost adPostingForm
+    (form, enctype) <- generateFormPost adPostingForm
     defaultLayout
         [whamlet|
+        ^{navbar}
         <form method=post action="@{NewPostingR}" enctype="">
-            ^{widget}
+            ^{form}
             <button>Submit me!
+        ^{footer}
         |]
 
 postNewPostingR :: Handler Html
@@ -95,7 +113,7 @@ postNewPostingR = do
             redirect $ AdPostingR adPostingId
         _ -> defaultLayout
          [whamlet|
-         <p> Something went rong m8
+         <p> Something went wrong m8
          |]
 
 getListAdsR :: Handler Html
@@ -103,22 +121,28 @@ getListAdsR = do
     ads <- runDB $ selectList [] [Desc AdPostingId]
     defaultLayout
         [whamlet|
+            ^{navbar}
             <ul>
             $forall ad <- ads
                 <li>#{show ad}
+            ^{footer}
          |]
 
 getAdPostingR :: AdPostingId -> Handler Html
 getAdPostingR adPostingId = do
-    adEntity <- runDB $ selectList [AdPostingId ==. adPostingId] []
+    [Entity _ (AdPosting title desc email price)] <- runDB $ selectList [AdPostingId ==. adPostingId] []
     defaultLayout
         [whamlet|
-            <p>#{show adEntity}
-            <p>#{adPostingTitle $ extractFromEntity adEntity}
+            ^{navbar}
+            <p>#{title}
+            <p>#{desc}
+            <p>#{show email}
+            <p>#{show price}
+            ^{footer}
         |] where
             extractFromEntity :: [(Entity a)] -> a
             extractFromEntity [(Entity _ a)] = a
-        
+
 
 
 main :: IO ()
