@@ -12,4 +12,7 @@ addEntries [x] =  do
 addEntries (x : xs) =  do
     _ <- sortAndLogEntry x
     e <- addEntries xs
-    return (e) 
+    return (e)
+
+sampleRun :: (String, [(String, String)])
+sampleRun = runWriter $ addEntries ["test1", "test2", "test3"] 
