@@ -18,7 +18,7 @@ import           Data.Text hiding (null)
 import           Database.Persist
 import           Database.Persist.Sqlite
 import           Yesod
-import           Text.Lucius (luciusFile)
+import           Text.Lucius (luciusFileReload)
 
 share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
     [persistLowerCase|
@@ -53,7 +53,7 @@ instance RenderMessage FirstYesodApp FormMessage where
 data Creators = Creators { courseName :: String, peopleCount :: Int }
 navbar :: Widget
 navbar = do
-    toWidget $(luciusFile "luciusFile.lucius")
+    toWidget $(luciusFileReload "luciusFile.lucius")
     toWidget
         [hamlet|
             <div #navbar>
@@ -153,9 +153,8 @@ getAdPostingR adPostingId = do
             ^{navbar}
             ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
             ^{footer}
-        |] where
-            extractFromEntity :: [(Entity a)] -> a
-            extractFromEntity [(Entity _ a)] = a
+        |] 
+        
 main :: IO ()
 main = do
     pool <- runStderrLoggingT $ createSqlitePool "test.db3" 10
