@@ -2,10 +2,9 @@
 import org.scalatestplus.play._
 import play.api.test._
 import play.api.test.Helpers._
-import org.scalacheck.Properties
-import org.scalacheck.Prop.forAll
+import org.scalatest.prop.PropertyChecks
 
-class ApplicationSpec extends Properties("String") with PlaySpec with OneAppPerTest {
+class ApplicationSpec extends PlaySpec with PropertyChecks with OneAppPerTest {
 
   "Routes" should {
     "send 404 on a bad request" in {
@@ -29,7 +28,7 @@ class ApplicationSpec extends Properties("String") with PlaySpec with OneAppPerT
     val emptyMessage = (msg: String) => route(app, FakeRequest(GET, "/test/" ++ msg)) get
 
     "return passed string message" in {
-      property("startsWith") = forAll { (msg: String) =>
+      forAll { (msg: String) =>
         {
           println(msg)
           val message = emptyMessage(msg)
