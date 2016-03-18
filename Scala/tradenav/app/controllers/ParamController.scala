@@ -6,8 +6,8 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 
 @Singleton
-class TestParamController @Inject() extends Controller {
-  def test(message: String) = Action {
+class ParamController @Inject() extends Controller {
+  def msg(message: String) = Action {
     Ok(views.html.index(message))
     
   }
