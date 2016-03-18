@@ -1,8 +1,9 @@
 
+import org.scalatest.prop.PropertyChecks
 import org.scalatestplus.play._
+
 import play.api.test._
 import play.api.test.Helpers._
-import org.scalatest.prop.PropertyChecks
 
 class ApplicationSpec extends PlaySpec with PropertyChecks with OneAppPerTest {
 
@@ -29,14 +30,14 @@ class ApplicationSpec extends PlaySpec with PropertyChecks with OneAppPerTest {
 
     "return passed string message" in {
       forAll { (msg: String) =>
-        {
-          println(msg)
+        { 
           val message = emptyMessage(msg)
-          contentAsString(message) contains (msg + "dupa")
-
+          contentAsString(message) must include(msg)
         }
       }
     }
   }
-
 }
+
+
+  
