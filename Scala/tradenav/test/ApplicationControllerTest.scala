@@ -4,6 +4,7 @@ import org.scalatestplus.play._
 
 import play.api.test._
 import play.api.test.Helpers._
+import org.scalacheck.Gen
 
 class ApplicationSpec extends PlaySpec with PropertyChecks with OneAppPerTest {
 
@@ -29,12 +30,19 @@ class ApplicationSpec extends PlaySpec with PropertyChecks with OneAppPerTest {
     val emptyMessage = (msg: String) => route(app, FakeRequest(GET, "/test/" ++ msg)) get
 
     "return passed string message" in {
-      forAll { (msg: String) =>
-        { 
+      forAll(Gen alphaStr) { (msg: String) =>
+        whenever(!msg.isEmpty) {
           val message = emptyMessage(msg)
+          status(message) mustBe OK
+          contentType(message) mustBe Some("text/html")
           contentAsString(message) must include(msg)
         }
       }
+    }
+
+    "return 404 when empty message is passed" in {
+      val message404 = emptyMessage("")
+      status(message404) mustBe 404
     }
   }
 }
