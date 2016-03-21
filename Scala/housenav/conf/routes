@@ -4,3 +4,7 @@
 
 GET     /                          controllers.ApplicationController.index
 GET     /test/:msg                 controllers.ParamController.msg(msg: String)
+
+GET     /location/new              controllers.LocationController.create
+POST    /location                  controllers.LocationController.save
+GET     /location                  controllers.LocationController.list

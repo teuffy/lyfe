@@ -1,0 +1,22 @@
+@(locations: Seq[Location])(implicit flash: play.api.mvc.Flash)
+
+<h2>Previously inserted cats:</h2>
+@flash.get("success").map { message =>
+<div class="alert-message warning">
+	<strong>Done!</strong> @message
+</div>
+}
+<table>
+	<tr>
+		<th>Id</th>
+		<th>Lat</th>
+		<th>Long</th>
+	</tr>
+	@for(l <- locations){
+	<tr>
+		<td>@l.id</td>
+		<td>@l.lat</td>
+		<td>@l.long</td>
+	</tr>
+	}
+</table>
