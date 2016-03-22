@@ -33,10 +33,10 @@ share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
 data FirstYesodApp = FirstYesodApp ConnectionPool
 
 mkYesod "FirstYesodApp" [parseRoutes|
-/ HomeR GET
-/addposting NewPostingR GET POST
-/listadds ListAdsR GET
-/posting/#AdPostingId AdPostingR GET
+/                       HomesR           GET
+/addposting             NewPostingR     GET POST
+/listadds               ListAdsR        GET
+/posting/#AdPostingId   AdPostingR      GET
 |]
 
 instance Yesod FirstYesodApp
