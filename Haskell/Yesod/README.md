@@ -112,7 +112,7 @@ mkYesod "MyFirstYesodApp" [parseRoutes|
 /addposting  NewPostingR GET
 /listads     ListAdsR    GET
 |]
-
+```
 As you now know - in order to compile our code we need to create two more functions - one is ```getNewPostingR``` and the second one is ```getListAdsR```. Both of them will be of type ```Handler Html```. For now please do not care about content of those pages:
 
 ```haskell
