@@ -59,7 +59,7 @@ We have to add those extra Language features:
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE OverloadedStrings     #-}
 ```
-and instance of our Yesod application:
+and instance of our Yesod application (in this case it is not very interesting instance of typeclass, but in here we will declare different settings of our app):
 
 ```haskell
 instance Yesod MyFirstYesodApp
@@ -83,7 +83,7 @@ import Yesod
 
 data MyFirstYesodApp = MyFirstYesodApp
 
-mkYesod "HelloWorld" [parseRoutes|
+mkYesod "MyFirstYesodApp" [parseRoutes|
 /    HomeR    GET
 |]
 
@@ -97,3 +97,72 @@ main = warp 3000 MyFirstYesodApp
 ```
 
 Please remember that in order to compile this module you need to install Yesod package with cabal.
+
+### Some fun and structure
+
+Woah, that was something! But any web application - even written in cool functoinal way - without any functionality is not something we are aiming for. So let's create simple site on which we will be able to post and list simple advertisements. Let's the journey begin!
+
+#### Links
+
+Okay, so we will definetly need at least two more pages - one for listing ads, second for adding one. Let's get our hands dirty - time to define two more resources.
+
+```haskell
+mkYesod "MyFirstYesodApp" [parseRoutes|
+/            HomeR       GET
+/addposting  NewPostingR GET
+/listads     ListAdsR    GET
+|]
+
+As you now know - in order to compile our code we need to create two more functions - one is ```getNewPostingR``` and the second one is ```getListAdsR```. Both of them will be of type ```Handler Html```. For now please do not care about content of those pages:
+
+```haskell
+getNewPostingR :: Handler Html
+getNewPostingR = defaultLayout [whamlet||]
+
+getListAdsR :: Handler Html
+getListAdsR = defaultLayout [whamlet||]
+```
+
+Okay, now we should put links into our Home resource.
+
+```haskell
+getHomeR = defaultLayout [whamlet|
+ <div>
+   <a href=@{NewPostingR}>Add posting
+   <a href=@{ListAdsR}>List ads!
+ |]
+```
+
+This is giving us possibility to talk about two things:
+ - Hamlet syntax
+ - Links in Yesod
+
+##### Links
+
+The first thinkg we have to note, that ```NewPostingR``` and ```ListAdsR``` are data constructors. That means that Haskell compiler treats those as any other Haskell value, making them type-safe. This gives us a huge amount of flexibility and possibility to compose them as any other Haskell value.
+
+##### Hamlet syntax (and others too)
+
+[Shakespearean Templates](http://www.yesodweb.com/book/shakespearean-templates)
+
+Of course adding the same links would mean copying. And that is something we do not like in any programming paradigm. That is where Yesod's Widgets come into play. Now we should declare our first Widget that will be used as a navigation bar:
+```haskell
+navbar :: Widget
+navbar = do
+    toWidget
+        [hamlet|
+            <div #navbar>
+                <a href=@{HomeR}>Main Page</a> / #
+                <a href=@{NewPostingR}>Add new ad</a> / #
+                <a href=@{ListAdsR}>List current ads</a>
+        |]
+```
+So we just declared our first widget - as you can see we already came to the Monads, but do not worry - as you can see they are not scary at all, in this case we could use similar - or same - functions to ```toWidget``` to add more content - css, javascript and so on (in type-safe manor of course). Second step is to use it in all of our resources:
+```haskell
+getHomeR = defaultLayout [whamlet|^{navbar}|]
+getNewPostingR = defaultLayout [whamlet|^{navbar}|]
+getListAdsR = defaultLayout [whamlet|^{navbar}|]
+```
+
+Pretty easy, isn't it? As you can see Widget is normal function, so we can pass arguments into it and operate on them (we will do it later :))
+
