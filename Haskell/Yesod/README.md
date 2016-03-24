@@ -262,4 +262,23 @@ In order to add data - in user friendly manor - we need some kind of form, in wh
 
 We need to declare ```Type``` of our Advertisement:
 ```haskell
+data AdPosting = AdPosting { title :: Text, description :: Textarea, contactEmail :: Maybe Text, price :: Maybe Double } deriving Show
 ```
+We also need to import Text, so our module will compile:
+```haskell
+import    Data.Text
+```
+
+Okay, so first we'll declare form, then I'll try to explain its elements:
+```haskell
+adPostingAForm :: AForm Handler AdPosting
+adPostingAForm = AdPosting
+    <$> areq textField "Title" Nothing
+    <*> areq textareaField "Description" Nothing
+    <*> aopt emailField "Contact Email" Nothing
+    <*> aopt doubleField "Price" Nothing
+```
+At the first glance it may seem scary, but when you'll think about it is very readable - even if you do not know all the operators, but let's try to take it apart and understand:
+ - First thing to note is type ```AForm``` it means that our form is ```Applicative```. To understand what does that mean please see [Learn you a Haskell](http://learnyouahaskell.com/functors-applicative-functors-and-monoids). But what we really need to know now is it allow us to create forms in very high-level and declarative way.
+ - areq and aopt functions: 
+ - Shortly about <$> and <*>
