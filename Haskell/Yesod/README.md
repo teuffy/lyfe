@@ -145,6 +145,8 @@ The first thinkg we have to note, that ```NewPostingR``` and ```ListAdsR``` are 
 
 [Shakespearean Templates](http://www.yesodweb.com/book/shakespearean-templates)
 
+#### Widgets
+
 Of course adding the same links would mean copying. And that is something we do not like in any programming paradigm. That is where Yesod's Widgets come into play. Now we should declare our first Widget that will be used as a navigation bar:
 ```haskell
 navbar :: Widget
@@ -163,6 +165,101 @@ getHomeR = defaultLayout [whamlet|^{navbar}|]
 getNewPostingR = defaultLayout [whamlet|^{navbar}|]
 getListAdsR = defaultLayout [whamlet|^{navbar}|]
 ```
+Pretty easy, isn't it? As you can see Widget is normal function, so we can pass arguments into it and operate on them (we will do it later). Okay, now I think we can create another Widget, that will represent the footer for our pages. Also now I'd like to show you possibility to use Haskell function within our widgets (so basically within our HTML/css/js). First let's declare new Type, that will represent creators of this page!
+```haskell
+data Creators = Creators { courseName :: String, peopleCount :: Int }
+```
+Now, it's time for our new Widget
+```haskell
+footer :: Widget
+footer = do 
+    to Widget [hamlet|
+                   <footer #footer>
+                     <p>This site was created by #{courseName creators}
+                     \ Why not sort our name? #{sort (courseName creators)}
+                     \ We are #{peopleCount creators} strong #
+                     Next time we will be #{(*) 2 (peopleCount creators)} strong!
+              |]
+                where creators = Creators "Haskell 101 Course" 5
+  
+```
+That is something, isn't it? So by know we now basics of using ```Widgets``` and Type-safe links. To sum up, right now we should have something like this (please note extra imports):
+```haskell
+{-# LANGUAGE QuasiQuotes           #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE OverloadedStrings     #-}
+module Sandbox where 
 
-Pretty easy, isn't it? As you can see Widget is normal function, so we can pass arguments into it and operate on them (we will do it later :))
+import    Yesod
+import    Data.List    (sort)
 
+data MyFirstYesodApp = MyFirstYesodApp
+
+mkYesod "MyFirstYesodApp" [parseRoutes|
+/            HomeR       GET
+/addposting  NewPostingR GET
+/listads     ListAdsR    GET
+|]
+
+instance Yesod MyFirstYesodApp
+
+data Creators = Creators { courseName :: String, peopleCount :: Int }
+
+navbar :: Widget
+navbar = do
+    toWidget
+        [hamlet|
+            <div #navbar>
+                <a href=@{HomeR}>Main Page</a> / #
+                <a href=@{NewPostingR}>Add new ad</a> / #
+                <a href=@{ListAdsR}>List current ads</a>
+        |]
+
+footer :: Widget
+footer = do
+    toWidget [hamlet|
+                 <footer #footer>
+                     <p>This site was created by #{courseName creators}
+                     \ Why not sort our name? #{sort (courseName creators)}
+                     \ We are #{peopleCount creators} strong #
+                     Next time we will be #{(*) 2 (peopleCount creators)} strong!
+              |]
+              where creators = Creators "Haskell 101 Course" 5
+
+getHomeR :: Handler Html
+getHomeR = defaultLayout [whamlet|
+  ^{navbar}
+  ^{footer}
+|]
+
+
+getNewPostingR :: Handler Html
+getNewPostingR = defaultLayout [whamlet|
+  ^{navbar}
+  ^{footer}
+|]
+
+getListAdsR :: Handler Html
+getListAdsR = defaultLayout [whamlet|
+  ^{navbar}
+  ^{footer}
+|]
+
+main :: IO ()
+main = warp 3000 MyFirstYesodApp
+```
+
+### Forms
+
+In order to add data - in user friendly manor - we need some kind of form, in which we will be able to create our Advertisement entity. Yesod delivers and Yesod devilers with a bang. Package ```yesod-form```. After [Yesod page](http://www.yesodweb.com/book/forms) Yesod's forms allows to:
+ - Ensure data is valid
+ - Convert data in the form into Haskell datatypes
+ - Generate HTML code for displaying the form
+ - Generate js for clientside validation
+ - Combine simpler forms to create more complex ones
+ - Assign names to our fields that are guaranteed to be unique.
+
+We need to declare ```Type``` of our Advertisement:
+```haskell
+```
