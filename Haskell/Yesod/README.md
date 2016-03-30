@@ -403,7 +403,7 @@ instance YesodPersist FirstYesodApp where
         FirstYesodApp pool <- getYesod
         runSqlPool action pool
 ```
-Here we also declared general ```runDB`` function that will make easier performing operations on our database. Now we are ready to write our ```postNewPostingR``` method
+Here we also declared general ```runDB``` function that will make easier performing operations on our database. Now we are ready to write our ```postNewPostingR``` method
 ```haskell
 postNewPostingR = do
     ((result, _), _) <- runFormPost adPostingForm
@@ -471,7 +471,7 @@ getListAdsR = do
         [whamlet|
             ^{navbar}
             $if null ads
-                <h1>Sorry, no ads yet!)
+                <h1>Sorry, no ads yet!
             $else
                 $forall Entity _ (AdPosting title desc maybeEmail maybePrice) <- ads
                     ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
@@ -631,7 +631,7 @@ getListAdsR = do
         [whamlet|
             ^{navbar}
             $if null ads
-                <h1>Sorry, no ads yet!)
+                <h1>Sorry, no ads yet!
             $else
                 $forall Entity _ (AdPosting title desc maybeEmail maybePrice) <- ads
                     ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
