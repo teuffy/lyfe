@@ -50,6 +50,7 @@ instance RenderMessage FirstYesodApp FormMessage where
 data Creators = Creators { courseName :: String, peopleCount :: Int }
 navbar :: Widget
 navbar = do
+    toWidget $(luciusFileReload "luciusFile.lucius")
     toWidget
         [hamlet|
             <div #navbar>

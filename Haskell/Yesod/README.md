@@ -1,4 +1,8 @@
-# Notes about MyFirstYesodApp
+# Let's create our first Yesod App!
+
+### Preface
+
+This is simple tutorial that is heavily based on [Developing Web Applications with Haskell and Yesod](http://www.yesodweb.com/book) so almost all credits need to go just there. This is simple tutorial that was created for needs of simple *Haskell 101 Course* that was organized by and for my collegues. I had an occasion to present basic Yesod application and content below is the effect, so if you find any mistake - do not hestiate co contact me. I hope by using this course you'll understand basic Yesod syntax and catch a glimpse of why writing code functional and expresive way is powerful and has a lot of potential. 
 
 ### Starting point
 
@@ -335,6 +339,8 @@ It is not very nice way to go, because now whenever we try to use ```postNewPost
  - Add new resource that will show result of our single insert action.
  - extend ```getListAdsR``` method, so it will show all ads.
 
+### Persistence
+
 As a first step we need to extends our ```MyFirstYesodApp``` data type by adding a connection pool
 ```haskell
 data FirstYesodApp = FirstYesodApp ConnectionPool
@@ -645,3 +651,19 @@ main = do
     warp 3000 $ MyFirstYesodApp pool
 ```
 
+### Extra: lucius
+
+Here are some few extra lines of code to make our code more pretty. ```lucius``` is Shakespearean template used by Yesod to define css. It supports variables and many more Haskell-ish features, in our case we'll use file defined by me, and it is simple and not very nice - it is not my strong point. Let's create file named ```luciusFile.lucius``` and in root directory of our project, click [here](https://github.com/navaro1/lyfe/blob/master/Haskell/Yesod/luciusFile.lucius) to see its content. In order to add it all of our pages we can extend our ```navbar``` widget.
+```haskell
+navbar = do
+    toWidget $(luciusFileReload "luciusFile.lucius")
+    toWidget
+        [hamlet|
+            <div #navbar>
+                <a href=@{HomeR}>Main Page</a> / #
+                <a href=@{NewPostingR}>Add new ad</a> / #
+                <a href=@{ListAdsR}>List current ads</a>
+        |]
+```
+
+And that's it!
