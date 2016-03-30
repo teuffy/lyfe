@@ -280,5 +280,48 @@ adPostingAForm = AdPosting
 ```
 At the first glance it may seem scary, but when you'll think about it is very readable - even if you do not know all the operators, but let's try to take it apart and understand:
  - First thing to note is type ```AForm``` it means that our form is ```Applicative```. To understand what does that mean please see [Learn you a Haskell](http://learnyouahaskell.com/functors-applicative-functors-and-monoids). But what we really need to know now is it allow us to create forms in very high-level and declarative way.
- - areq and aopt functions: 
- - Shortly about <$> and <*>
+ - areq function has a type (simplified): ```Field a -> FieldSettings -> Maybe a -> AForm a```. First argument specifies datatype of field, in our case it is ```textField```, ```textareaField```, ```emailField``` or ```doubleField```. As you can see based on this Yesod will choose how to parse and render it. Next argument ```FieldSettings``` takes ID and label of given field. Last parameter ```Maybe a``` provides place for a default value (Hint: editing existing entities). Aopt is basically the same, but it is optional field whereas req is required field in our form (Remember? Yesod provides validation and this is part of it).
+
+When we do try to compile first get error about missing import from Applicative - <*> and <$>, then something new:
+```haskell
+No instance for (RenderMessage MyFirstYesodApp FormMessage)
+      arising from a use of `areq'
+```
+
+```yesod-form``` uses its messages in terms of ```FormMessage``` datatype. So in order to use it we need instance of ```RenderMessage```. If you would like to dig deeper please visit [Yesod site](http://www.yesodweb.com/book/forms#forms_i18n). For now we can be content with default instance:
+```haskell
+instance RenderMessage MyFirstYesodApp FormMessage where
+    renderMessage _ _ = defaultFormMessage
+```
+As RenderMessage is a typeclass that takes two parameters we have to use additional language extension:
+```haskell
+{-# LANGUAGE MultiParamTypeClasses #-}
+```
+
+We declared our form, now we need to add it to existing resource. First let's ```renderTable```
+```haskell
+adPostingForm :: Html -> MForm Handler (FormResult AdPosting, Widget)
+adPostingForm = renderTable adPostingAForm
+```
+So we created ```MForm Handler``` with ```FormResult``` and a ```Widget``` in tupled form. Careful reader may notice that we should be using applicative form, but we still converted into monadic one. Why? How come? It is all about code reuse. In our resource we can use monadic forms, so ```renderTable``` get's us there. And finally, having our form as monadic form we can add it in very safe manor.
+
+```haskell
+getNewPostingR = do
+    (form, _) <- generateFormPost adPostingForm
+    defaultLayout
+        [whamlet|
+        ^{navbar}
+        <form method=post action="@{NewPostingR}" enctype="">
+            ^{form}
+            <button>Submit me!  
+        ^{footer}
+        |]
+```
+
+So as you can see we chained our expressions with ```do``` operator, so basically we bind result of ```generateFormPost``` to content of our ```defaultLayout``` function. 
+
+Of course now our fresh new form does not do much - mainly because of the lack of POST resource that will correspond to ```NewPostingR```. Let's solve that problem.
+```haskell
+/addposting  NewPostingR GET POST
+```
+
