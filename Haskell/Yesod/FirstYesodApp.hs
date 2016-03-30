@@ -12,13 +12,10 @@
 
 import           Control.Applicative          ((<$>), (<*>))
 import           Control.Monad.Logger         (runStderrLoggingT)
-import           Control.Monad.Trans.Resource (runResourceT)
 import           Data.List                    (sort)
 import           Data.Text hiding (null)
-import           Database.Persist
 import           Database.Persist.Sqlite
 import           Yesod
-import           Text.Lucius (luciusFileReload)
 
 share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
     [persistLowerCase|
@@ -33,7 +30,7 @@ share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
 data FirstYesodApp = FirstYesodApp ConnectionPool
 
 mkYesod "FirstYesodApp" [parseRoutes|
-/                       HomesR           GET
+/                       HomeR           GET
 /addposting             NewPostingR     GET POST
 /listadds               ListAdsR        GET
 /posting/#AdPostingId   AdPostingR      GET
@@ -53,7 +50,6 @@ instance RenderMessage FirstYesodApp FormMessage where
 data Creators = Creators { courseName :: String, peopleCount :: Int }
 navbar :: Widget
 navbar = do
-    toWidget $(luciusFileReload "luciusFile.lucius")
     toWidget
         [hamlet|
             <div #navbar>
@@ -94,7 +90,7 @@ adPostingAForm = AdPosting
 adPostingForm :: Html -> MForm Handler (FormResult AdPosting, Widget)
 adPostingForm = renderTable adPostingAForm
 
-getNewPostingR :: Handler Html
+getNewPostingR :: Handler Html  
 getNewPostingR = do
     (form, enctype) <- generateFormPost adPostingForm
     defaultLayout
@@ -102,7 +98,7 @@ getNewPostingR = do
         ^{navbar}
         <form method=post action="@{NewPostingR}" enctype="">
             ^{form}
-            <button>Submit me!
+            <button>Submit me!  
         ^{footer}
         |]
 
@@ -115,7 +111,7 @@ postNewPostingR = do
             redirect $ AdPostingR adPostingId
         _ -> defaultLayout
          [whamlet|
-         <p> Something went wrong m8
+         <p> Something went wrong!
          |]
 
 adContainerWidget :: AdPosting -> Widget

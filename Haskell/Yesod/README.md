@@ -324,4 +324,324 @@ Of course now our fresh new form does not do much - mainly because of the lack o
 ```haskell
 /addposting  NewPostingR GET POST
 ```
+Now compiler will start complaining about lack of ```postNewPostingR```. As we like our compiler friend, we should try to make it happy
+```haskell
+postNewPostingR :: Handler Html
+postNewPostingR = undefined
+```
+It is not very nice way to go, because now whenever we try to use ```postNewPostingR``` we will receive error! But as I do not want to simply show result of our form we will do following things
+ - Create database connection to sqlite database.
+ - Result of the form will be inserted into our database.
+ - Add new resource that will show result of our single insert action.
+ - extend ```getListAdsR``` method, so it will show all ads.
+
+As a first step we need to extends our ```MyFirstYesodApp``` data type by adding a connection pool
+```haskell
+data FirstYesodApp = FirstYesodApp ConnectionPool
+```
+We need to add proper sqlite import
+```haskell
+import Database.Persist.Sqlite
+```
+Now we should start to listen our complier friend
+```haskell
+    No instance for (YesodDispatch (ConnectionPool -> MyFirstYesodApp))
+      arising from a use of `warp'
+```
+As our ```main``` method is a ```IO ()``` monad we can chain expressions by using ```do``` operator
+```haskell
+main = do
+    pool <- runStderrLoggingT $ createSqlitePool "test.db3" 10
+    warp 3000 $ MyFirstYesodApp pool
+```
+Yesod also (by default) forces us to use ```runStderrLoggingT```, so we need to add an import
+```haskell
+import Control.Monad.Logger (runStderrLoggingT)
+```
+And if you are scared of ```$``` operator, just note that it means nothing more than "first evaluate expression on the right side and then pass it to the expression on the left side""". So we created connection pool for our database that will be named ```test.db3``` with ```ConnectionPool``` of size ```10```.
+
+Now we need to create schema and share entities between database and our code, in order to do use we can use helper function called ```share``` which passes information from persistent block and shares it to each ```TemplateHaskell``` function, finally concatenating the result.
+```haskell
+share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
+    [persistLowerCase|
+           AdPosting
+            title Text
+            description Textarea
+            contactEmail Text Maybe
+            price Double Maybe
+            deriving Show
+    |]
+```
+And now our nagging compiler friend is complaining. We need to add language extension
+```haskell
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GADTs                      #-}
+```
+Now in our ```share``` function we have
+ - ```mkPresist``` that takes list of entites and creates one Haskell datatype for each and one ```PersistEntity``` instance for each datatype defined.
+ - ```mkMigrate``` creates new function that will perform migration on all entities defined in ```persist``` block.
+
+But even after all that we still get error (and interesting one!)
+```haskell
+Multiple declarations of `AdPosting'
+```
+
+As we stated before ```share``` function does all the declarations for us, so we can remove our old datatype declaration ```data AdPosting = ...```. We also need some place to actually perform migration of our database, and ```main``` method looks - at least for me -- as perfect place.
+```haskell
+main = do
+    pool <- runStderrLoggingT $ createSqlitePool "test.db3" 10
+    runSqlPersistMPool (runMigration migrateAll) pool
+    warp 3000 $ MyFirstYesodApp pool
+```
+
+Still we miss one more thing - instance of ```YesodPersist``` for our app
+```haskell
+instance YesodPersist FirstYesodApp where
+    type YesodPersistBackend FirstYesodApp = SqlBackend
+    runDB action = do
+        FirstYesodApp pool <- getYesod
+        runSqlPool action pool
+```
+Here we also declared general ```runDB`` function that will make easier performing operations on our database. Now we are ready to write our ```postNewPostingR``` method
+```haskell
+postNewPostingR = do
+    ((result, _), _) <- runFormPost adPostingForm
+    case result of
+        FormSuccess adPosting -> do
+            adPostingId <- runDB $ insert adPosting
+            redirect $ AdPostingR adPostingId
+        _ -> defaultLayout
+         [whamlet|
+         <p> Something went wrong!
+         |]
+```
+As you can see all we care about in here is ```result``` from ```runFormPost``` method. If it is instance of ```FormSuccess`` we insert our entity into database and redirect to ```AdPostingR``` with ```adPostingId``` as a parameter. In any other case we just print "Something went wrong!". If you are cautius you should see that we did not declare any ```AdPostingR``` resource. Let's do this now
+```haskell
+mkYesod "MyFirstYesodApp" [parseRoutes|
+/            HomeR       GET
+/addposting  NewPostingR GET POST
+/listads     ListAdsR    GET
+/posting/#AdPostingId   AdPostingR      GET
+|]
+```
+Here you can see that we are using path parameter named ```#AdPostingId```. In order to do so we need language extendsion
+```haskell
+getAdPostingR :: AdPostingId -> Handler Html
+getAdPostingR adPostingId = do
+    [Entity _ (AdPosting title desc maybeEmail maybePrice)] <- runDB $ selectList [AdPostingId ==. adPostingId] []
+    defaultLayout
+        [whamlet|
+            ^{navbar}
+            ^{footer}
+        |] 
+```
+Before we just put output into our resource let's recognize one thing - we can create reusable ```Widget``` that will be used both in ```getAdPostingR``` and (forgotten by now) ```getListsAdsR```.
+```haskell
+adContainerWidget :: AdPosting -> Widget
+adContainerWidget (AdPosting title desc maybeEmail maybePrice) = do
+    toWidget
+        [hamlet|
+             <div #adPosting>
+                <div #adTitle> #{title}
+                <div #adContent> #{desc}
+                <div #adFooter>
+                $maybe email <- maybeEmail
+                    <span #adEmail> #{show email}
+                $maybe price <- maybePrice
+                     <span #adPrice> #{show price}
+        |]
+```
+Interesting thing here is argument pattern matching, so within parameter of our method we extract fields of our ```AdPosting```. Also we show ```email``` and ```price``` only when they are not empty. Knowing that we can extend ```getAdPostingR```
+```haskell
+getAdPostingR adPostingId = do
+    [Entity _ (AdPosting title desc maybeEmail maybePrice)] <- runDB $ selectList [AdPostingId ==. adPostingId] []
+    defaultLayout
+        [whamlet|
+            ^{navbar}
+            ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
+            ^{footer}
+        |] 
+```
+and ```getListsAdsR```
+```haskell
+getListAdsR = do
+    ads <- runDB $ selectList [] [Desc AdPostingId]
+    defaultLayout
+        [whamlet|
+            ^{navbar}
+            $if null ads
+                <h1>Sorry, no ads yet!)
+            $else
+                $forall Entity _ (AdPosting title desc maybeEmail maybePrice) <- ads
+                    ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
+            ^{footer}
+         |]
+```
+Unfortunatelly after that we got compiler error ```Ambiguous occurrence `null'```. We can easly solve it by updating our import
+```haskell
+import           Data.Text        hiding (null)
+```
+and - another - language extension
+```haskell
+{-# LANGUAGE ViewPatterns               #-}
+```
+
+So, to sum up - we have fully functioning application (with out any css, which makes it a little bit ugly) written in type-safe, functional and easy to extend manor
+```haskell
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
+
+import           Control.Applicative     ((<$>), (<*>))
+import           Control.Monad.Logger    (runStderrLoggingT)
+import           Data.List               (sort)
+import           Data.Text               hiding (null)
+import           Database.Persist.Sqlite
+import           Yesod
+
+data MyFirstYesodApp = MyFirstYesodApp ConnectionPool
+
+share [mkPersist sqlSettings,  mkMigrate "migrateAll"]
+    [persistLowerCase|
+           AdPosting
+            title Text
+            description Textarea
+            contactEmail Text Maybe
+            price Double Maybe
+            deriving Show
+    |]
+
+mkYesod "MyFirstYesodApp" [parseRoutes|
+/            HomeR       GET
+/addposting  NewPostingR GET POST
+/listads     ListAdsR    GET
+/posting/#AdPostingId   AdPostingR      GET
+|]
+
+instance YesodPersist MyFirstYesodApp where
+    type YesodPersistBackend MyFirstYesodApp = SqlBackend
+    runDB action = do
+        MyFirstYesodApp pool <- getYesod
+        runSqlPool action pool
+
+instance Yesod MyFirstYesodApp
+
+data Creators = Creators { courseName :: String, peopleCount :: Int }
+
+navbar :: Widget
+navbar = do
+    toWidget
+        [hamlet|
+            <div #navbar>
+                <a href=@{HomeR}>Main Page</a> / #
+                <a href=@{NewPostingR}>Add new ad</a> / #
+                <a href=@{ListAdsR}>List current ads</a>
+        |]
+
+footer :: Widget
+footer = do
+    toWidget [hamlet|
+                 <footer #footer>
+                     <p>This site was created by #{courseName creators}
+                     \ Why not sort our name? #{sort (courseName creators)}
+                     \ We are #{peopleCount creators} strong #
+                     Next time we will be #{(*) 2 (peopleCount creators)} strong!
+              |]
+              where creators = Creators "Haskell 101 Course" 5
+
+getHomeR :: Handler Html
+getHomeR = defaultLayout [whamlet|
+  ^{navbar}
+  ^{footer}
+|]
+
+
+instance RenderMessage MyFirstYesodApp FormMessage where
+    renderMessage _ _ = defaultFormMessage
+
+adPostingAForm :: AForm Handler AdPosting
+adPostingAForm = AdPosting
+    <$> areq textField "Title" Nothing
+    <*> areq textareaField "Description" Nothing
+    <*> aopt emailField "Contact Email" Nothing
+    <*> aopt doubleField "Price" Nothing
+
+adPostingForm :: Html -> MForm Handler (FormResult AdPosting, Widget)
+adPostingForm = renderTable adPostingAForm
+
+
+getNewPostingR :: Handler Html
+getNewPostingR = do
+    (form, _) <- generateFormPost adPostingForm
+    defaultLayout
+        [whamlet|
+        ^{navbar}
+        <form method=post action="@{NewPostingR}" enctype="">
+            ^{form}
+            <button>Submit me!
+        ^{footer}
+        |]
+
+postNewPostingR :: Handler Html
+postNewPostingR = do
+    ((result, _), _) <- runFormPost adPostingForm
+    case result of
+        FormSuccess adPosting -> do
+            adPostingId <- runDB $ insert adPosting
+            redirect $ AdPostingR adPostingId
+        _ -> defaultLayout
+         [whamlet|
+         <p> Something went wrong!
+         |]
+
+adContainerWidget :: AdPosting -> Widget
+adContainerWidget (AdPosting title desc maybeEmail maybePrice) = do
+    toWidget
+        [hamlet|
+             <div #adPosting>
+                <div #adTitle> #{title}
+                <div #adContent> #{desc}
+                <div #adFooter>
+                $maybe email <- maybeEmail
+                    <span #adEmail> #{show email}
+                $maybe price <- maybePrice
+                     <span #adPrice> #{show price}
+        |]
+
+getAdPostingR :: AdPostingId -> Handler Html
+getAdPostingR adPostingId = do
+    [Entity _ (AdPosting title desc maybeEmail maybePrice)] <- runDB $ selectList [AdPostingId ==. adPostingId] []
+    defaultLayout
+        [whamlet|
+            ^{navbar}
+            ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
+            ^{footer}
+        |]
+
+getListAdsR :: Handler Html
+getListAdsR = do
+    ads <- runDB $ selectList [] [Desc AdPostingId]
+    defaultLayout
+        [whamlet|
+            ^{navbar}
+            $if null ads
+                <h1>Sorry, no ads yet!)
+            $else
+                $forall Entity _ (AdPosting title desc maybeEmail maybePrice) <- ads
+                    ^{adContainerWidget (AdPosting title desc maybeEmail maybePrice)}
+            ^{footer}
+         |]
+
+main :: IO ()
+main = do
+    pool <- runStderrLoggingT $ createSqlitePool "test.db3" 10
+    runSqlPersistMPool (runMigration migrateAll) pool
+    warp 3000 $ MyFirstYesodApp pool
+```
 
