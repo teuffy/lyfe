@@ -2,7 +2,7 @@
 
 ### Preface
 
-This is simple tutorial that is heavily based on [Developing Web Applications with Haskell and Yesod](http://www.yesodweb.com/book) so almost all credits need to go just there. This is simple tutorial that was created for needs of simple *Haskell 101 Course* that was organized by and for my collegues. I had an occasion to present basic Yesod application and content below is the effect, so if you find any mistake - do not hestiate co contact me. I hope by using this course you'll understand basic Yesod syntax and catch a glimpse of why writing code functional and expresive way is powerful and has a lot of potential. 
+This is simple tutorial that is heavily based on [Developing Web Applications with Haskell and Yesod](http://www.yesodweb.com/book) so almost all credits need to go just there. This is simple tutorial that was created for needs of simple *Haskell 101 Course* that was organized by and for my collegues. I had an occasion to present basic Yesod application and content below is the effect, so if you find any mistake - do not hestiate to contact me. I hope by using this course you'll understand basic Yesod syntax and catch a glimpse of why writing code functional and expresive way is powerful and has a lot of potential. 
 
 ### Starting point
 
