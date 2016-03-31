@@ -5,6 +5,11 @@
 GET     /                          controllers.ApplicationController.index
 GET     /test/:msg                 controllers.ParamController.msg(msg: String)
 
+# User management
+
+GET     /user/new                  controllers.UserController.createForm
+POST    /user/new                  controllers.UserController.saveUser
+
 GET     /location/new              controllers.LocationController.create
 POST    /location                  controllers.LocationController.save
 GET     /location                  controllers.LocationController.list
