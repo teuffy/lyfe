@@ -4,6 +4,8 @@
 
 This is simple tutorial that is heavily based on [Developing Web Applications with Haskell and Yesod](http://www.yesodweb.com/book) so almost all credits need to go just there. This is simple tutorial that was created for needs of simple *Haskell 101 Course* that was organized by and for my collegues. I had an occasion to present basic Yesod application and content below is the effect, so if you find any mistake - do not hestiate to contact me. I hope by using this course you'll understand basic Yesod syntax and catch a glimpse of why writing code functional and expresive way is powerful and has a lot of potential. 
 
+It is begginer tutorial, but still it requires from user ability to use cabal and basic Haskell syntax, [this](https://howistart.org/posts/haskell/1) guide is quite okay, but bit too long. Compiler is your friend, so with modern IDE it should be piece of cake!
+
 ### Starting point
 
 In order to create simple working Yesod webapp, we do not need too much. First we need to create our own ```Type```. So it would like this:
