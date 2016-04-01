@@ -26,7 +26,7 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
             "id" -> optional(longNumber),
             "email" -> email,
             "password" -> nonEmptyText(8, 20).verifying(isAlphaNumericString),
-            "name" -> optional(nonEmptyText(3, 20)))(User.apply)(User.unapply))
+            "name" -> optional(text))(User.apply)(User.unapply))
     private def isAlphaNumericString: String => Boolean =
         (s: String) => s.matches("""(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(_|[^\w])).+""")
 

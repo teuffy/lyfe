@@ -18,82 +18,104 @@ import models.User
 import org.scalacheck.Gen
 import dao.UsersDAO
 import org.scalacheck.Arbitrary._
+import scala.util.Random
+import org.scalatest.BeforeAndAfterEach
 
 class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest {
 
-  "UserController" should {
+    "UserController" should {
 
-    val userRoot: String = "/user"
+        val userRoot: String = "/user"
 
-    "render new user page" in {
-      val userHome: Future[Result] = route(app, FakeRequest(GET, userRoot + "/new")) get
+        "render new user page" in {
+            val userHome: Future[Result] = route(app, FakeRequest(GET, userRoot + "/new")) get
 
-      status(userHome) mustBe OK
-      contentType(userHome) mustBe Some("text/html")
-      contentAsString(userHome) must include("email")
-      contentAsString(userHome) must include("name")
-      contentAsString(userHome) must include("password")
+            status(userHome) mustBe OK
+            contentType(userHome) mustBe Some("text/html")
+            contentAsString(userHome) must include("email")
+            contentAsString(userHome) must include("name")
+            contentAsString(userHome) must include("password")
+        }
+
+        def usersDAO(implicit app: Application) = {
+            val app2UsersDAO = Application.instanceCache[UsersDAO]
+            app2UsersDAO(app)
+        }
+
+        "should be able to create new user" in {
+            implicit val generatorDrivenConfig =
+                PropertyCheckConfig(maxSize = 20)
+
+            val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
+            def generateUpToElements[A] = (gen: Gen[A], upperBound: Int) =>
+                Gen.oneOf(1 to upperBound).flatMap { n =>
+                    Gen.listOfN(n, gen).flatMap { e => (e, n) }
+                }
+
+            def createGeneratorFromSequenceAndSize[A](generators: Seq[Gen[A]], min: Int, max: Int, f: (Gen[A], Int) => Gen[(List[A], Int)]): Gen[Seq[A]] = {
+                val start = min - generators.size + 1
+                val ending = max - generators.size + 1
+                def recHelper(recGenerators: Seq[Gen[A]], accu: Seq[A], upperBound: Int, upperBoundSubtraction: Int): Gen[Seq[A]] =
+                    recGenerators match {
+                        case x :: xs if (x :: xs == generators) => Gen.choose(start, ending).flatMap(f(x, _))
+                            .flatMap { case (chars, n) => recHelper(xs, accu ++ chars, upperBound + 1, upperBoundSubtraction + n) }
+                        case x :: xs => f(x, upperBound - upperBoundSubtraction).flatMap { case (chars, n) => recHelper(xs, accu ++ chars, upperBound + 1, upperBoundSubtraction + n) }
+                        case Nil => accu
+
+                    }
+                recHelper(generators, Nil, ending, 0)
+            }
+
+            val properPasswords: Gen[String] = {
+                val generators: Seq[Gen[Char]] = List(Gen.alphaLowerChar, Gen.alphaUpperChar, Gen.numChar, Gen.oneOf(specialChars))
+                createGeneratorFromSequenceAndSize(generators, 8, 20, generateUpToElements)
+                    .flatMap(Random.shuffle(_).mkString)
+            }
+
+            val properEmails: Gen[String] = Gen.alphaStr
+                .suchThat(email => email.length > 0)
+                .flatMap(_ + "@test.com")
+            val properNames: Gen[String] = Gen.alphaStr
+                .suchThat(e => e.isEmpty || e.length > 2)
+            forAll(properPasswords, properEmails, properNames) { (password: String, email: String, name: String) =>
+                usersDAO.deleteAll
+                val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
+                val createUser: Future[Result] = route(app, FakeRequest(POST, userRoot + "/new").withJsonBody(properJson)) get
+
+                status(createUser) mustBe SEE_OTHER
+                redirectLocation(createUser) mustBe Some("/")
+                flash(createUser).get("success") mustBe Some("You have created account")
+
+                val getFirstUserFromSeq = (seq: Seq[User]) =>
+                    seq.head
+
+                val createdUser: User = Await.result(usersDAO.getAll.map(getFirstUserFromSeq), Duration.Inf)
+                createdUser.email mustBe email
+                createdUser.name mustBe (if (name.isEmpty) None else Some(name))
+            }
+
+        }
+
+//        "should validate fields" in {
+//            fail
+//        }
+//
+//        "should be able to log in" in {
+//            fail
+//        }
+//
+//        "should be able to update data when logged in" in {
+//            fail
+//        }
+//
+//        "should be able to log out" in {
+//            fail
+//        }
+//
+//        "should be able to delete his account" in {
+//            fail
+//        }
+
     }
-
-    def usersDAO(implicit app: Application) = {
-      val app2UsersDAO = Application.instanceCache[UsersDAO]
-      app2UsersDAO(app)
-    }
-
-    "should be able to create new user" in {
-      val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
-      val properPasswords: Gen[String] = for {
-        n <- Gen.choose(2, 5)
-        specials <- Gen.listOfN(n, specialChars)
-        nums <- Gen.listOfN(n, Gen.numChar)
-        lowerCase <- Gen.listOfN(n, Gen.alphaLowerChar)
-        upperCase <- Gen.listOfN(n, Gen.alphaUpperChar)
-      } yield specials.mkString ++ nums.mkString ++ lowerCase.mkString ++ upperCase.mkString
-      
-      val properEmails: Gen[String] = Gen.alphaStr
-        .filter(_.length > 0)
-        .flatMap(_ + "@test.com")
-      val properNames: Gen[String] = Gen.alphaStr
-        .suchThat(e => e.isEmpty || e.length > 2 && e.length < 21)
-      forAll(properPasswords, properEmails, properNames) { (password: String, email: String, name: String) =>
-        val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
-        val createUser: Future[Result] = route(app, FakeRequest(POST, userRoot + "/new").withJsonBody(properJson)) get
-
-        status(createUser) mustBe SEE_OTHER
-        redirectLocation(createUser) mustBe Some("/")
-        flash(createUser).get("success") mustBe Some("You have created account")
-
-        val getFirstUserByEmailFromSeq = (seq: Seq[User]) =>
-          seq.filter(_.email == email).head
-
-        val createdUser: User = Await.result(usersDAO.getAll.map(getFirstUserByEmailFromSeq), Duration.Inf)
-
-        createdUser.email mustBe email
-        createdUser.name mustBe (if (name.isEmpty) None else Some(name))
-      }
-
-    }
-
-    "should validate fields" in {
-      fail
-    }
-
-    "should be able to log in" in {
-      fail
-    }
-
-    "should be able to update data when logged in" in {
-      fail
-    }
-
-    "should be able to log out" in {
-      fail
-    }
-
-    "should be able to delete his account" in {
-      fail
-    }
-
-  }
 
 }

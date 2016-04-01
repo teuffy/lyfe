@@ -41,4 +41,8 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
 
     def findById(id: Long): Future[Option[User]] =
         db.run(Users.filter(_.id === id).result.headOption)
+        
+    def deleteAll = {
+        db.run(Users.delete)
+    }
 }
