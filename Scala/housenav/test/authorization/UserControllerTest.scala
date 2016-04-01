@@ -42,9 +42,9 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
             app2UsersDAO(app)
         }
 
-        "should be able to create new user" in {
+        "should be able to create new account" in {
             implicit val generatorDrivenConfig =
-                PropertyCheckConfig(maxSize = 20)
+                PropertyCheckConfig(maxSize = 30)
 
             val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
             def generateUpToElements[A] = (gen: Gen[A], upperBound: Int) =>
@@ -58,8 +58,9 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
                 def recHelper(recGenerators: Seq[Gen[A]], accu: Seq[A], upperBound: Int, upperBoundSubtraction: Int): Gen[Seq[A]] =
                     recGenerators match {
                         case x :: xs if (x :: xs == generators) => Gen.choose(start, ending).flatMap(f(x, _))
-                            .flatMap { case (chars, n) => recHelper(xs, accu ++ chars, upperBound + 1, upperBoundSubtraction + n) }
-                        case x :: xs => f(x, upperBound - upperBoundSubtraction).flatMap { case (chars, n) => recHelper(xs, accu ++ chars, upperBound + 1, upperBoundSubtraction + n) }
+                            .flatMap { case (elements, n) => recHelper(xs, accu ++ elements, upperBound + 1, upperBoundSubtraction + n) }
+                        case x :: xs => f(x, upperBound - upperBoundSubtraction)
+                            .flatMap { case (elements, n) => recHelper(xs, accu ++ elements, upperBound + 1, upperBoundSubtraction + n) }
                         case Nil => accu
 
                     }
@@ -87,34 +88,43 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
                 flash(createUser).get("success") mustBe Some("You have created account")
 
                 val getFirstUserFromSeq = (seq: Seq[User]) =>
-                    seq.head
+                    seq.headOption
 
-                val createdUser: User = Await.result(usersDAO.getAll.map(getFirstUserFromSeq), Duration.Inf)
-                createdUser.email mustBe email
-                createdUser.name mustBe (if (name.isEmpty) None else Some(name))
+                val createdUser: Option[User] = Await.result(usersDAO.getAll.map(getFirstUserFromSeq), Duration.Inf)
+                createdUser.map(_.email mustBe email)
+                createdUser.map(u => u.name mustBe (if (name.isEmpty) None else Some(name)))
             }
 
         }
 
-//        "should validate fields" in {
-//            fail
-//        }
-//
-//        "should be able to log in" in {
-//            fail
-//        }
-//
-//        "should be able to update data when logged in" in {
-//            fail
-//        }
-//
-//        "should be able to log out" in {
-//            fail
-//        }
-//
-//        "should be able to delete his account" in {
-//            fail
-//        }
+        "should be able to log in" in {
+            val email: String = "email@email.com"
+            val password: String = "Test!234"
+            val newUser: User = User(None, email, password, None)
+            usersDAO.insert(newUser)
+
+            val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
+            val loginAsUser: Future[Result] = route(app, FakeRequest(POST, userRoot + "/login").withJsonBody(newUserLoginJson)) get
+
+            status(loginAsUser) mustBe SEE_OTHER
+            redirectLocation(loginAsUser) mustBe Some("/")
+            flash(loginAsUser).get("success") mustBe Some("You have logged in!")
+            session(loginAsUser).get("userEmail") mustBe Some(email)
+            session(loginAsUser).get("logged") mustBe Some("true")
+
+        }
+        //
+        //        "should be able to update data when logged in" in {
+        //            fail
+        //        }
+        //
+        //        "should be able to log out" in {
+        //            fail
+        //        }
+        //
+        //        "should be able to delete his account" in {
+        //            fail
+        //        }
 
     }
 

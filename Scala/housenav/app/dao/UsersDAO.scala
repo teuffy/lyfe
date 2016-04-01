@@ -42,6 +42,9 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
     def findById(id: Long): Future[Option[User]] =
         db.run(Users.filter(_.id === id).result.headOption)
         
+    def authenticate(email: String, password: String): Future[Boolean] = 
+        db.run(Users.filter(u => u.email === email && u.password === password).result.headOption).map(!_.isEmpty)
+        
     def deleteAll = {
         db.run(Users.delete)
     }
