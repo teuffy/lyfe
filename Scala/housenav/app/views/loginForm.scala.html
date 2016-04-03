@@ -1,0 +1,13 @@
+@(loginForm: Form[(String, String)])(implicit messages: Messages)
+
+@import helper._
+
+	<h1>New User Form</h1>
+	@form(routes.UserController.login()) {
+		<fieldset>
+		@inputText(loginForm("email"), '_label -> "email")
+		@inputText(loginForm("password"), '_label -> "pasword")
+		</fieldset>
+		
+	<input type="submit" value="Create account">
+	}

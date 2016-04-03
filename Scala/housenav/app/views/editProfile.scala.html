@@ -1,0 +1,14 @@
+@(id: Long, userForm: Form[User])(implicit messages: Messages)
+
+@import helper._
+
+    <h1>New User Form</h1>
+    @form(routes.UserController.updateProfile(id)) {
+        <fieldset>
+        @inputText(userForm("name"), '_label -> "name")
+        @inputText(userForm("email"), '_label -> "email")
+        @inputText(userForm("password"), '_label -> "password")
+        </fieldset>
+        
+    <input type="submit" value="Create account">
+    }
