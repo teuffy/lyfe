@@ -43,33 +43,31 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     }
     //invalid data
     "should be able to create new account" in {
-      //            implicit val generatorDrivenConfig =
-      //                PropertyCheckConfig(maxSize = 30)
+      forAll(properPasswordsUpTo(20), properEmails, properNames) { (password: String, email: String, name: String) =>
+        {
+          usersDAO.deleteAll
+          val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
+          val createUserFuture: Future[Result] = route(app, FakeRequest(POST, userRoot + "/new").withJsonBody(properJson)) get
+          val createUser = Await.result(createUserFuture, Duration.Inf)
 
-      val properNames: Gen[String] = Gen.alphaStr
-        .suchThat(e => e.isEmpty || e.length > 2)
-      forAll(properPasswords, properEmails, properNames) { (password: String, email: String, name: String) =>
-        usersDAO.deleteAll
-        val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
-        val createUser: Future[Result] = route(app, FakeRequest(POST, userRoot + "/new").withJsonBody(properJson)) get
+          status(createUserFuture) mustBe SEE_OTHER
+          redirectLocation(createUserFuture) mustBe Some("/")
+          flash(createUserFuture).get("success") mustBe Some("You have created account")
 
-        status(createUser) mustBe SEE_OTHER
-        redirectLocation(createUser) mustBe Some("/")
-        flash(createUser).get("success") mustBe Some("You have created account")
+          val getFirstUserFromSeq = (seq: Seq[User]) =>
+            seq.headOption
 
-        val getFirstUserFromSeq = (seq: Seq[User]) =>
-          seq.headOption
-
-        val createdUser: Option[User] = Await.result(usersDAO.getAll.map(getFirstUserFromSeq), Duration.Inf)
-        createdUser mustNot be(None)
-        createdUser.map(_.email mustBe email)
-        createdUser.map(u => u.name mustBe (if (name.isEmpty) None else Some(name)))
+          val createdUser: Option[User] = Await.result(usersDAO.getAll.map(getFirstUserFromSeq), Duration.Inf)
+          createdUser mustNot be(None)
+          createdUser.map(_.email mustBe email)
+          createdUser.map(u => u.name mustBe (if (name.isEmpty) None else Some(name)))
+        }
       }
 
     }
     //TODO: invalid data
     "should be able to log in" in {
-      forAll(properEmails, properPasswords) { (email: String, password: String) =>
+      forAll(properEmails, properPasswordsUpTo(20)) { (email: String, password: String) =>
         val newUser: User = User(None, email, password, None)
         usersDAO.insert(newUser)
 
@@ -86,23 +84,29 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     }
 
     "should be able to update data when logged in" in {
-      val email: String = "email@email.com"
-      val password: String = "Test!234"
-      val newUser: User = User(None, email, password, None)
-      val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
-      val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
+      forAll(properPasswordsUpTo(17), properEmails, properNames) { (password: String, email: String, name: String) =>
+        {
+          val newUser: User = User(None, email, password, None)
+          val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
+          val updateUserJson: JsValue = Json.parse(s"""{"id": "$userId", "email":"new$email", "password":"new$password", "name":"$name"}""")
+          val fakeRequestWithSession = FakeRequest(POST, userRoot + s"/$userId").withJsonBody(updateUserJson).withSession("userEmail" -> email, "isLogged" -> "true")
+          val updateUserFuture = route(app, fakeRequestWithSession) get
+          val updateUser = Await.result(updateUserFuture, Duration.Inf)
 
-      val updateUserJson: JsValue = Json.parse(s"""{"id": "$userId", "email":"new$email", "password":"new$password", "name":"New name"}""")
-      val updateUserFuture = route(app, FakeRequest(POST, userRoot + s"/$userId").withJsonBody(updateUserJson).withSession("userEmail" -> email, "isLogged" -> "true")) get
-      val updateUser = Await.result(updateUserFuture, Duration.Inf)
-      val updatedUser: Option[User] = Await.result(usersDAO.findById(userId), Duration.Inf)
-      updatedUser mustNot be(None)
-      updatedUser.map(u => {
-        u.id mustBe Some(userId)
-        u.email mustBe "new" + email
-        u.name mustBe Some("New name")
-        u.password mustBe "new" + password
-      })
+          status(updateUserFuture) mustBe SEE_OTHER
+          redirectLocation(updateUserFuture) mustBe Some("/")
+          flash(updateUserFuture).get("success") mustBe Some("your profile has beed updated")
+
+          val updatedUser: Option[User] = Await.result(usersDAO.findById(userId), Duration.Inf)
+          updatedUser mustNot be(None)
+          updatedUser.map(u => {
+            u.id mustBe Some(userId)
+            u.email mustBe "new" + email
+            u.name mustBe (if (name.isEmpty) None else Some(name))
+            u.password mustBe "new" + password
+          })
+        }
+      }
     }
     //
     //        "should be able to log out" in {
@@ -121,7 +125,7 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     }
 
   def createGeneratorFromSequenceAndSize[A](generators: Seq[Gen[A]], min: Int, max: Int, f: (Gen[A], Int) => Gen[(List[A], Int)]): Gen[Seq[A]] = {
-    val start = min - generators.size + 1
+    val start = min - generators.size + 3
     val ending = max - generators.size + 1
     def recHelper(recGenerators: Seq[Gen[A]], accu: Seq[A], upperBound: Int, upperBoundSubtraction: Int): Gen[Seq[A]] =
       recGenerators match {
@@ -134,13 +138,16 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     recHelper(generators, Nil, ending, 0)
   }
 
-  val properPasswords: Gen[String] = {
+  def properPasswordsUpTo(maxSize: Int): Gen[String] = {
     val generators: Seq[Gen[Char]] = List(Gen.alphaLowerChar, Gen.alphaUpperChar, Gen.numChar, Gen.oneOf(specialChars))
-    createGeneratorFromSequenceAndSize(generators, 8, 20, generateUpToElements)
+    createGeneratorFromSequenceAndSize(generators, 8, maxSize, generateUpToElements)
       .flatMap(Random.shuffle(_).mkString)
   }
 
   val properEmails: Gen[String] = Gen.alphaStr
     .suchThat(email => email.length > 0)
     .flatMap(_ + "@test.com")
+
+  val properNames: Gen[String] = Gen.alphaStr
+    .suchThat(e => e.isEmpty || e.length > 2)
 }

@@ -1,7 +1,6 @@
 package dao
 
 import scala.concurrent.Future
-
 import javax.inject.Inject
 import javax.inject.Singleton
 import models.User
@@ -9,6 +8,8 @@ import play.api.db.slick.DatabaseConfigProvider
 import play.api.db.slick.HasDatabaseConfigProvider
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import slick.driver.H2Driver
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 trait UserComponent { self: HasDatabaseConfigProvider[H2Driver] =>
   import driver.api._
