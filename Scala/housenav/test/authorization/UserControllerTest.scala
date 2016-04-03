@@ -108,10 +108,20 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
         }
       }
     }
-    //
-    //        "should be able to log out" in {
-    //            fail
-    //        }
+
+    "should be able to log out" in {
+      val email = "email@email.com"
+      val password = "Test!234"
+      val newUser: User = User(None, email, password, None)
+      val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
+      val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
+      val loginAsUserFuture: Future[Result] = route(app, FakeRequest(POST, userRoot + "/login").withJsonBody(newUserLoginJson)) get
+
+      session(loginAsUserFuture).get("userEmail") mustBe Some(email)
+      val logout = route(app, FakeRequest(POST, userRoot + "/logout")) get
+
+      session(logout) mustBe empty
+    }
     //
     //        "should be able to delete his account" in {
     //            fail

@@ -91,6 +91,10 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
           }
         })
     }
+  
+  def logout = Action {
+    Redirect(routes.ApplicationController.index).withNewSession.flashing("success" -> "you have logged out")
+  }
 }
     
 
