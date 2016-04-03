@@ -85,7 +85,6 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
       implicit request => userForm.bindFromRequest.fold(
         formWithErrors => Future(BadRequest(views.html.editProfile(id, formWithErrors))),
         formUser => {
-          println(formUser)
           usersDAO.update(id, formUser).map {
             case 1 => Redirect(routes.ApplicationController.index).flashing("success" -> "your profile has beed updated")
             case _ => Forbidden

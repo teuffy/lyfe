@@ -90,22 +90,18 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
       val password: String = "Test!234"
       val newUser: User = User(None, email, password, None)
       val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
-      var all = Await.result(usersDAO.getAll, Duration.Inf)
-       all.foreach(u => println("user: " + u))
       val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
 
       val updateUserJson: JsValue = Json.parse(s"""{"id": "$userId", "email":"new$email", "password":"new$password", "name":"New name"}""")
-      val updateUser = route(app, FakeRequest(POST, userRoot + s"/$userId").withJsonBody(updateUserJson).withSession("userEmail" -> email, "isLogged" -> "true")) get
+      val updateUserFuture = route(app, FakeRequest(POST, userRoot + s"/$userId").withJsonBody(updateUserJson).withSession("userEmail" -> email, "isLogged" -> "true")) get
+      val updateUser = Await.result(updateUserFuture, Duration.Inf)
       val updatedUser: Option[User] = Await.result(usersDAO.findById(userId), Duration.Inf)
-      println("UPDATED: " + updatedUser)
-      all = Await.result(usersDAO.getAll, Duration.Inf)
-      all.foreach(u => println("user: " + u))
       updatedUser mustNot be(None)
       updatedUser.map(u => {
         u.id mustBe Some(userId)
         u.email mustBe "new" + email
         u.name mustBe Some("New name")
-        u.password mustBe Some("new" + password)
+        u.password mustBe "new" + password
       })
     }
     //

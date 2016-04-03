@@ -38,8 +38,6 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
     
   def update(id: Long, user: User): Future[Int] = {
     val userToUpdate = user.copy(Some(id))
-    println(userToUpdate)
-    println(id)
     db.run(Users.filter(_.id === id).update(userToUpdate))
   }
 
