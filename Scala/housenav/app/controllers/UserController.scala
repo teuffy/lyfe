@@ -23,99 +23,92 @@ import UserController._
 
 @Singleton
 class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
-    lazy val loginForm = Form(
-        tuple(
-            "email" -> text,
-            "password" -> text) verifying ("Invalid user or password", result => result match {
-                case (email, password) => {
-                    usersDAO.authenticate(email, password)
-                    true
-                }
-                case _ => false
-            }))
+  lazy val userForm: Form[User] = Form(
+    mapping(
+      "id" -> optional(longNumber),
+      "email" -> email,
+      "password" -> nonEmptyText(8, 20).verifying(isAlphaNumericString),
+      "name" -> optional(text))(User.apply)(User.unapply))
 
-    def createNewUserForm: Action[AnyContent] = Action {
-        Ok(views.html.newUserForm(userForm))
-    }
-
-    def saveUser: Action[AnyContent] = Action.async { implicit request =>
-        userForm.bindFromRequest.fold(
-            formWithErrors => {
-                Future(BadRequest(views.html.newUserForm(formWithErrors)))
-            },
-            user => {
-                usersDAO.insert(user)
-                Future(Redirect(routes.ApplicationController.index).flashing("success" -> "You have created account"))
-            })
-    }
-
-    def createLoginForm: Action[AnyContent] = Action {
-        Ok(views.html.loginForm(loginForm))
-    }
-
-    def login: Action[AnyContent] = Action { implicit request =>
-        {
-            loginForm.bindFromRequest.fold(
-                formWithErrors => BadRequest(views.html.loginForm(formWithErrors)),
-                logged => Redirect(routes.ApplicationController.index)
-                    .flashing("success" -> "You have logged in!")
-                    .withSession("userEmail" -> logged._1, "isLogged" -> "true"))
+  lazy val loginForm = Form(
+    tuple(
+      "email" -> text,
+      "password" -> text) verifying ("Invalid user or password", result => result match {
+        case (email, password) => {
+          usersDAO.authenticate(email, password)
+          true
         }
+        case _ => false
+      }))
 
+  def createNewUserForm: Action[AnyContent] = Action {
+    Ok(views.html.newUserForm(userForm))
+  }
+
+  def saveUser: Action[AnyContent] = Action.async { implicit request =>
+    userForm.bindFromRequest.fold(
+      formWithErrors => {
+        Future(BadRequest(views.html.newUserForm(formWithErrors)))
+      },
+      user => {
+        usersDAO.insert(user)
+        Future(Redirect(routes.ApplicationController.index).flashing("success" -> "You have created account"))
+      })
+  }
+
+  def createLoginForm: Action[AnyContent] = Action {
+    Ok(views.html.loginForm(loginForm))
+  }
+
+  def login: Action[AnyContent] = Action.async { implicit request =>
+    loginForm.bindFromRequest.fold(
+      formWithErrors => Future(BadRequest(views.html.loginForm(formWithErrors))),
+      logged => Future(Redirect(routes.ApplicationController.index)
+        .flashing("success" -> "You have logged in!")
+        .withSession("userEmail" -> logged._1, "isLogged" -> "true")))
+  }
+
+  def editProfile = IsAuthenticated { userData =>
+    _ =>
+      usersDAO.findByEmail(userData).map {
+        case Some(u) => Ok(views.html.editProfile(u.id.get, userForm.fill(u)))
+        case _ => Forbidden
+      }
+  }
+
+  def updateProfile(id: Long) =
+    IsAuthenticated { userData =>
+      implicit request => userForm.bindFromRequest.fold(
+        formWithErrors => Future(BadRequest(views.html.editProfile(id, formWithErrors))),
+        formUser => {
+          usersDAO.update(id, formUser).map {
+            case 1 => Redirect(routes.ApplicationController.index).flashing("success" -> "your profile has beed updated")
+            case _ => Forbidden
+          }
+        })
     }
 
-    def editProfile = IsAuthenticated { userData =>
-        _ =>
-            usersDAO.findByEmail(userData).map {
-                case Some(u) => Ok(views.html.editProfile(u.id.get, userForm.fill(u)))
-                case _ => Forbidden
-            }
-    }
+  def logout = Action {
+    Redirect(routes.ApplicationController.index).withNewSession.flashing("success" -> "you have logged out")
+  }
 
-    def updateProfile(id: Long) =
-        IsAuthenticated { userData =>
-            implicit request => userForm.bindFromRequest.fold(
-                formWithErrors => Future(BadRequest(views.html.editProfile(id, formWithErrors))),
-                formUser => {
-                    usersDAO.update(id, formUser).map {
-                        case 1 => Redirect(routes.ApplicationController.index).flashing("success" -> "your profile has beed updated")
-                        case _ => Forbidden
-                    }
-                })
+  def delete =
+    IsAuthenticated { userData =>
+      _ => usersDAO.findByEmail(userData).flatMap {
+        case Some(u) => usersDAO.delete(u.id.get).map {
+          case 1 =>
+            Redirect(routes.ApplicationController.index)
+              .flashing("success" -> "you have deleted your account")
+              .withNewSession
+          case _ => BadRequest
         }
-
-    def logout = Action {
-        Redirect(routes.ApplicationController.index).withNewSession.flashing("success" -> "you have logged out")
-    }
-
-    def delete(id: Long) = {
-        IsAuthenticated { userData =>
-            _ => usersDAO.findByEmail(userData).flatMap {
-                case Some(u) => usersDAO.delete(u.id.get).map {
-                    case 1 =>
-                        Redirect(routes.ApplicationController.index)
-                            .flashing("success" -> "you have deleted your account")
-                            .withNewSession
-                    case _ => BadRequest
-                }
-                case _ => Future(Forbidden)
-            }
-
-        }
-
-    }
+        case _ => Future(Forbidden)
+      }}
 
 }
 
 object UserController {
-    lazy val userForm: Form[User] = Form(
-        mapping(
-            "id" -> optional(longNumber),
-            "email" -> email,
-            "password" -> nonEmptyText(8, 20).verifying(isAlphaNumericString),
-            "name" -> optional(text))(User.apply)(User.unapply))
-
-    private def isAlphaNumericString: String => Boolean =
-        (s: String) => s.matches("""(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(_|[^\w])).+""")
+  private def isAlphaNumericString: String => Boolean =
+    (s: String) => s.matches("""(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(_|[^\w])).+""")
 }
 

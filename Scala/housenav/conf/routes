@@ -2,20 +2,20 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET     /                controllers.ApplicationController.index
-GET     /test/:msg       controllers.ParamController.msg(msg: String)
+GET       /                 controllers.ApplicationController.index
+GET       /test/:msg        controllers.ParamController.msg(msg: String)
 
 # User management
 
-GET     /users/new        controllers.UserController.createNewUserForm
-POST    /users        controllers.UserController.saveUser
-GET     /users/login      controllers.UserController.createLoginForm
-POST    /users/login      controllers.UserController.login
-GET     /users/profile    controllers.UserController.editProfile
-PUT     /users/:id        controllers.UserController.updateProfile(id: Long)
-POST    /users/logout     controllers.UserController.logout
-DELETE  /user/:id        controllers.UserController.delete(id: Long)
+GET       /users/new        controllers.UserController.createNewUserForm
+POST      /users            controllers.UserController.saveUser
+GET       /users/login      controllers.UserController.createLoginForm
+POST      /users/login      controllers.UserController.login
+GET       /users/profile    controllers.UserController.editProfile
+PUT       /users/:id        controllers.UserController.updateProfile(id: Long)
+POST      /users/logout     controllers.UserController.logout
+DELETE    /users            controllers.UserController.delete
 
-GET     /location/new    controllers.LocationController.create
-POST    /location        controllers.LocationController.save
-GET     /location        controllers.LocationController.list
+GET       /location/new     controllers.LocationController.create
+POST      /location         controllers.LocationController.save
+GET       /location         controllers.LocationController.list
