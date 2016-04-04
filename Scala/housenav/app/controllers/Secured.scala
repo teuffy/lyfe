@@ -12,7 +12,7 @@ trait Secured {
 
   def IsAuthenticated(f: => String => Request[AnyContent] => Future[Result]) =
     Security.Authenticated(userInfo, onUnauthorized) { userData =>
-      Action.async{ request => f(userData)(request) }
+      Action.async { request => f(userData)(request) }
     }
 
 }

@@ -89,7 +89,7 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
           val newUser: User = User(None, email, password, None)
           val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
           val updateUserJson: JsValue = Json.parse(s"""{"id": "$userId", "email":"new$email", "password":"new$password", "name":"$name"}""")
-          val fakeRequestWithSession = FakeRequest(POST, userRoot + s"/$userId").withJsonBody(updateUserJson).withSession("userEmail" -> email, "isLogged" -> "true")
+          val fakeRequestWithSession = FakeRequest(PUT, userRoot + s"/$userId").withJsonBody(updateUserJson).withSession("userEmail" -> email, "isLogged" -> "true")
           val updateUserFuture = route(app, fakeRequestWithSession) get
           val updateUser = Await.result(updateUserFuture, Duration.Inf)
 
@@ -119,13 +119,21 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
 
       session(loginAsUserFuture).get("userEmail") mustBe Some(email)
       val logout = route(app, FakeRequest(POST, userRoot + "/logout")) get
-
+      
       session(logout) mustBe empty
     }
-    //
-    //        "should be able to delete his account" in {
-    //            fail
-    //        }
+
+    "should be able to delete his account" in {
+      val email = "email@email.com"
+      val password = "Test!234"
+      val newUser: User = User(None, email, password, None)
+      val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
+      val deleteFuture = route(app, FakeRequest(DELETE, userRoot + s"/$userId").withSession("userEmail" -> email, "isLogged" -> "true")).get
+
+      status(deleteFuture) mustBe SEE_OTHER
+      val deletedUser: Option[User] = Await.result(usersDAO.findById(userId), Duration.Inf)
+      deletedUser must be(None)
+    }
 
   }
   val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
@@ -135,7 +143,7 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     }
 
   def createGeneratorFromSequenceAndSize[A](generators: Seq[Gen[A]], min: Int, max: Int, f: (Gen[A], Int) => Gen[(List[A], Int)]): Gen[Seq[A]] = {
-    val start = min - generators.size + 3
+    val start = min - generators.size + 1
     val ending = max - generators.size + 1
     def recHelper(recGenerators: Seq[Gen[A]], accu: Seq[A], upperBound: Int, upperBoundSubtraction: Int): Gen[Seq[A]] =
       recGenerators match {
@@ -145,7 +153,7 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
           .flatMap { case (elements, n) => recHelper(xs, accu ++ elements, upperBound + 1, upperBoundSubtraction + n) }
         case Nil => accu
       }
-    recHelper(generators, Nil, ending, 0)
+    recHelper(generators, Nil, ending, 0).suchThat(_.length >= min)
   }
 
   def properPasswordsUpTo(maxSize: Int): Gen[String] = {
@@ -159,5 +167,4 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     .flatMap(_ + "@test.com")
 
   val properNames: Gen[String] = Gen.alphaStr
-    .suchThat(e => e.isEmpty || e.length > 2)
 }

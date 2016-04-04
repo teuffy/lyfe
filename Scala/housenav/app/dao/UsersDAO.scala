@@ -36,7 +36,7 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
 
   def insert(users: Seq[User]): Future[Unit] =
     db.run(this.Users ++= users).map(_ => ())
-    
+
   def update(id: Long, user: User): Future[Int] = {
     val userToUpdate = user.copy(Some(id))
     db.run(Users.filter(_.id === id).update(userToUpdate))
@@ -48,13 +48,18 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
   def findById(id: Long): Future[Option[User]] =
     db.run(Users.filter(_.id === id).result.headOption)
 
-  def findByEmail(email: String): Future[Option[User]] =
+  def findByEmail(email: String): Future[Option[User]] = {
     db.run(Users.filter(_.email === email).result.headOption)
+  }
 
   def authenticate(email: String, password: String): Future[Boolean] =
     db.run(Users.filter(u => u.email === email && u.password === password).result.headOption).map(!_.isEmpty)
 
-  def deleteAll = {
+  def deleteAll =
     db.run(Users.delete)
+
+  def delete(id: Long) = {
+    db.run(Users.filter(_.id === id).delete)
   }
+
 }

@@ -91,10 +91,28 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
           }
         })
     }
-  
+
   def logout = Action {
     Redirect(routes.ApplicationController.index).withNewSession.flashing("success" -> "you have logged out")
   }
+
+  def delete(id: Long) = {
+    IsAuthenticated { userData =>
+      request => usersDAO.findByEmail(userData).flatMap {
+        case Some(u) => usersDAO.delete(u.id.get).map {
+          case 1 => 
+            Redirect(routes.ApplicationController.index)
+              .flashing("success" -> "you have deleted your account")
+              .withNewSession
+          case _ => BadRequest
+        }
+        case _ =>  Future(Forbidden)
+      }
+
+    }
+
+  }
+
 }
     
 

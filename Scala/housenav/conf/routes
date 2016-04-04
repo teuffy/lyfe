@@ -12,8 +12,9 @@ POST    /user/new        controllers.UserController.saveUser
 GET     /user/login      controllers.UserController.createLoginForm
 POST    /user/login      controllers.UserController.login
 GET     /user/profile    controllers.UserController.editProfile
-POST    /user/:id        controllers.UserController.updateProfile(id: Long)
+PUT     /user/:id        controllers.UserController.updateProfile(id: Long)
 POST    /user/logout     controllers.UserController.logout
+DELETE  /user/:id        controllers.UserController.delete(id: Long)
 
 GET     /location/new    controllers.LocationController.create
 POST    /location        controllers.LocationController.save
