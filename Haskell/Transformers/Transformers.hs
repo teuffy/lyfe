@@ -85,3 +85,43 @@ instance Monad CReader where
   return = CReader . const
 -- >>= :: CReader a -> (a -> CReader b) -> CReader b
 a >>= f = CReader $ \c -> runCR (f ((runCR a) c)) c
+-- a >>= f = CReader $ \c -> let a' = runCR a c
+--                               f' = f a'
+--                           in runCR f' c
+
+validateAndInitLogM :: String -> CReader (IO (Maybe Handle))
+validateAndInitLogM preambule = do
+  v <- validateMessageF preambule
+  case v of
+    Left err -> return (putStrLn ("Invalid prompt: " ++ preambule) >> return Nothing)
+    Right () -> do
+      h <- initLogFileF preambule
+      return (fmap Just h)
+
+-- Reader without the T
+
+validateMsgRdr :: String -> Reader AppConfig (Either String())
+validateMsgRdr msg = do
+  max <- reader maxMessageLength
+  if (length msg > max)
+    then return $ Left ("Message too long: " ++ msg)
+    else return $ Right ()
+
+initLogFileRdr :: String -> Reader AppConfig (IO Handle)
+initLogFileRdr preamble = do
+  f <- reader logfile
+  v <- reader version
+  return $ do
+    h <- openFile f WriteMode
+    hPutStrLn h (preamble ++ ", version: " ++ v)
+    return h
+
+initLogFileRT :: String -> ReaderT AppConfig IO Handle
+initLogFileRT preamble = do
+  f <- reader logfile
+  v <- reader version
+  h <- liftIO $ openFile f WriteMode
+  liftIO $ hPutStrLn h (preamble ++ ", version: " ++ v)
+  return h
+
+-- Transformer Kinds
