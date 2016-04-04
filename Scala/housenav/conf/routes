@@ -7,13 +7,13 @@ GET     /test/:msg       controllers.ParamController.msg(msg: String)
 
 # User management
 
-GET     /user/new        controllers.UserController.createNewUserForm
-POST    /user/new        controllers.UserController.saveUser
-GET     /user/login      controllers.UserController.createLoginForm
-POST    /user/login      controllers.UserController.login
-GET     /user/profile    controllers.UserController.editProfile
-PUT     /user/:id        controllers.UserController.updateProfile(id: Long)
-POST    /user/logout     controllers.UserController.logout
+GET     /users/new        controllers.UserController.createNewUserForm
+POST    /users        controllers.UserController.saveUser
+GET     /users/login      controllers.UserController.createLoginForm
+POST    /users/login      controllers.UserController.login
+GET     /users/profile    controllers.UserController.editProfile
+PUT     /users/:id        controllers.UserController.updateProfile(id: Long)
+POST    /users/logout     controllers.UserController.logout
 DELETE  /user/:id        controllers.UserController.delete(id: Long)
 
 GET     /location/new    controllers.LocationController.create
