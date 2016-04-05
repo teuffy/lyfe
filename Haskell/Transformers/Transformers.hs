@@ -125,3 +125,54 @@ initLogFileRT preamble = do
   return h
 
 -- Transformer Kinds
+
+validateMsgRT :: String -> ReaderT AppConfig IO (Either String ())
+validateMsgRT msg = vfun <$> reader maxMessageLength
+  where
+    vfun max | length msg > max = Left ("Message too long: " ++ msg)
+             | otherwise        = Right ()
+
+validateMessageRTM :: (Functor m, Monad m) => String -> ReaderT AppConfig m (Either String ())
+validateMessageRTM msg = vfun <$> reader maxMessageLength
+  where
+    vfun max | length msg > max = Left ("Message too long: " ++ msg)
+             | otherwise        = Right ()
+
+validateMessageMR :: (Functor m, MonadReader AppConfig m) => String -> m (Either String ())
+validateMessageMR msg = vfun <$> reader maxMessageLength
+  where
+    vfun max | length msg > max = Left ("Message too long: " ++ msg)
+             | otherwise    = Right ()
+
+initLogFileMR :: (MonadReader AppConfig m, MonadIO m) => String -> m Handle
+initLogFileMR preamble = do
+  f <- reader logfile
+  v <- reader version
+  h <- liftIO $ openFile f WriteMode
+  liftIO $ hPutStrLn h (preamble ++ ", version" ++ v)
+  return h
+
+-- Putting it all toegether
+readConfig :: FilePath -> IO AppConfig
+readConfig f = (fromTup . read) <$> (readFile f)
+  where fromTup (a, b, c) = AppConfig a b c
+
+main :: IO ()
+main = do
+  configFile <- head <$> getArgs
+  config <- readConfig configFile
+  runReaderT go config
+
+go :: (Functor m, MonadReader AppConfig m, MonadIO m) => m ()
+go = do
+  h <- initLogFileMR "Starting"
+  forever $ do 
+    liftIO $ putStr $ "Your message: "
+    m <- liftIO $ getLine
+    v <- validateMessageMR m
+    case v of
+      (Right ()) -> logMsg h $ "valid input"
+      (Left err) -> logMsg h $ "invalid input: " ++ err
+
+logMsg :: (MonadIO m) => Handle -> String -> m ()
+logMsg h = liftIO . hPutStrLn h
