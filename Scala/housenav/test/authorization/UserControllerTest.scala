@@ -1,25 +1,24 @@
 package authorization
 
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.Duration
+import scala.util.Random
+
+import org.scalacheck._
+import org.scalacheck.Gen._
 import org.scalatest.prop.PropertyChecks
-import org.scalatestplus.play.OneAppPerTest
-import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.{ OneAppPerTest, PlaySpec }
+
+import dao.UsersDAO
+import javax.inject.Singleton
+import models.User
+import play.api.Application
+import play.api.http.Writeable
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ JsValue, Json }
+import play.api.mvc.Result
 import play.api.test._
 import play.api.test.Helpers._
-import play.api.libs.json.Json
-import javax.inject.Inject
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Application
-import scala.concurrent.Future
-import play.api.mvc.Result
-import play.api.libs.json.JsValue
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import models.User
-import org.scalacheck.Gen
-import dao.UsersDAO
-import org.scalacheck.Arbitrary._
-import scala.util.Random
-import org.scalatest.BeforeAndAfterEach
 
 class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest {
 
@@ -45,19 +44,19 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     //invalid data
     "should be able to create new account" in {
       forAll(properPasswordsUpTo(20), properEmails, properNames) { (password: String, email: String, name: String) =>
-          usersDAO.deleteAll
-          val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
-          route(app, FakeRequest(POST, userRoot).withJsonBody(properJson)).map { createUser =>
-            status(createUser) mustBe SEE_OTHER
-            redirectLocation(createUser) mustBe Some("/")
-            flash(createUser).get("success") mustBe Some("You have created account")
-          }
+        usersDAO.deleteAll
+        val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
+        route(app, FakeRequest(POST, userRoot).withJsonBody(properJson)).map { createUser =>
+          status(createUser) mustBe SEE_OTHER
+          redirectLocation(createUser) mustBe Some("/")
+          flash(createUser).get("success") mustBe Some("You have created account")
+        }
 
-          usersDAO.findByEmail(email).map { createdUser =>
-            createdUser mustNot be(None)
-            createdUser.map(_.email mustBe email)
-            createdUser.map(u => u.name mustBe (if (name.isEmpty) None else Some(name)))
-          }
+        usersDAO.findByEmail(email).map { createdUser =>
+          createdUser mustNot be(None)
+          createdUser.map(_.email mustBe email)
+          createdUser.map(u => u.name mustBe (if (name.isEmpty) None else Some(name)))
+        }
       }
 
     }
@@ -90,7 +89,7 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
             .withJsonBody(updateUserJson)
             .withSession("userEmail" -> email, "isLogged" -> "true")
           route(app, fakeRequestWithSession).map { updateUser =>
-            status(updateUser) mustBe SEE_OTHER
+            status(updateUser).mustBe(SEE_OTHER)
             redirectLocation(updateUser) mustBe Some("/")
             flash(updateUser).get("success") mustBe Some("your profile has beed updated")
           }
@@ -113,24 +112,33 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
       val newUser: User = User(None, email, password, None)
       usersDAO.insert(newUser)
       val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
-      route(app, FakeRequest(POST, userRoot + "/login").withJsonBody(newUserLoginJson)).map(
-        session(_).get("userEmail") mustBe Some(email))
-      route(app, FakeRequest(POST, userRoot + "/logout")).map(session(_) mustBe empty)
+      val loginRequest = FakeRequest(POST, userRoot + "/login").withJsonBody(newUserLoginJson)
+      val sessionMustContainEmail = (email: String) => (f: Future[Result]) => session(f).get("userEmail") mustBe Some(email)
+      sendFakeRequestAndMapResult(loginRequest, sessionMustContainEmail(email))
+      val logourRequest = FakeRequest(POST, userRoot + "/logout")
+      val sessionMustBeEmpty = (f: Future[Result]) => session(f) mustBe empty
+      sendFakeRequestAndMapResult(logourRequest, sessionMustBeEmpty)
     }
 
     "should be able to delete his account" in {
+
       val email = "email@email.com"
       val password = "Test!234"
       val newUser: User = User(None, email, password, None)
+      val statusMustBeSeeOther = (f: Future[Result]) => status(f) mustBe SEE_OTHER
       usersDAO.insert(newUser)
-      route(app, FakeRequest(DELETE, userRoot)
-        .withSession("userEmail" -> email, "isLogged" -> "true"))
-        .map(status(_) mustBe SEE_OTHER)
+      val deleteRequest = FakeRequest(DELETE, userRoot).withSession("userEmail" -> email, "isLogged" -> "true")
+      sendFakeRequestAndMapResult(deleteRequest, statusMustBeSeeOther)
 
       usersDAO.findByEmail(email).map(_ mustBe None)
     }
 
   }
+
+  def sendFakeRequestAndMapResult[T](req: FakeRequest[T], f: Future[Result] => Unit)(implicit w: Writeable[T]) = {
+    route(app, req).map(f)
+  }
+    
 
   private val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
   def generateUpToElements[A] = (gen: Gen[A], upperBound: Int) =>
