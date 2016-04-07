@@ -22,19 +22,15 @@ import play.api.test.Helpers._
 
 class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest {
 
+  val userRoot: String = "/users"
+
   "UserController" should {
 
-    val userRoot: String = "/users"
-
     "render new user page" in {
-      route(app, FakeRequest(GET, userRoot + "/new")).map { userHome =>
-        status(userHome) mustBe OK
-        contentType(userHome) mustBe Some("text/html")
-        contentAsString(userHome) must include("email")
-        contentAsString(userHome) must include("name")
-        contentAsString(userHome) must include("password")
-      }
-
+      val getFormRequest = FakeRequest(GET, userRoot + "/new")
+      sendFakeRequestAndMapResult(getFormRequest,
+        statusMustBe(OK),
+        contentMustInclude("email"), contentMustInclude("name"), contentMustInclude("password"))
     }
 
     def usersDAO(implicit app: Application) = {
@@ -45,12 +41,10 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     "should be able to create new account" in {
       forAll(properPasswordsUpTo(20), properEmails, properNames) { (password: String, email: String, name: String) =>
         usersDAO.deleteAll
-        val properJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
-        route(app, FakeRequest(POST, userRoot).withJsonBody(properJson)).map { createUser =>
-          status(createUser) mustBe SEE_OTHER
-          redirectLocation(createUser) mustBe Some("/")
-          flash(createUser).get("success") mustBe Some("You have created account")
-        }
+        val newUserJson: JsValue = Json.parse(s"""{"name": "$name", "password": "$password", "email":"$email"}""")
+        val createUserRequest = (properJson: JsValue) => FakeRequest(POST, userRoot).withJsonBody(properJson)
+        sendFakeRequestAndMapResult(createUserRequest(newUserJson),
+          statusMustBe(SEE_OTHER), redirectLocationMustBeSome("/"), flashMustBeSome("success", "You have created account"))
 
         usersDAO.findByEmail(email).map { createdUser =>
           createdUser mustNot be(None)
@@ -66,14 +60,9 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
         val newUser: User = User(None, email, password, None)
         usersDAO.insert(newUser)
         val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
-        route(app, FakeRequest(POST, userRoot + "/login")
-          .withJsonBody(newUserLoginJson)).map { userLogin =>
-          status(userLogin) mustBe SEE_OTHER
-          redirectLocation(userLogin) mustBe Some("/")
-          flash(userLogin).get("success") mustBe Some("You have logged in!")
-          session(userLogin).get("userEmail") mustBe Some(email)
-          session(userLogin).get("isLogged") mustBe Some("true")
-        }
+        sendFakeRequestAndMapResult(loginRequest(newUserLoginJson),
+          statusMustBe(SEE_OTHER), redirectLocationMustBeSome("/"), flashMustBeSome("success", "You have logged in!"),
+          sessionMustContainKV("userEmail", email), sessionMustContainKV("isLogged", "true"))
 
       }
 
@@ -88,11 +77,9 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
           val fakeRequestWithSession = FakeRequest(PUT, userRoot + s"/$userId")
             .withJsonBody(updateUserJson)
             .withSession("userEmail" -> email, "isLogged" -> "true")
-          route(app, fakeRequestWithSession).map { updateUser =>
-            status(updateUser).mustBe(SEE_OTHER)
-            redirectLocation(updateUser) mustBe Some("/")
-            flash(updateUser).get("success") mustBe Some("your profile has beed updated")
-          }
+
+          sendFakeRequestAndMapResult(fakeRequestWithSession,
+            statusMustBe(SEE_OTHER), redirectLocationMustBeSome("/"), flashMustBeSome("success", "your profile has beed updated"))
 
           usersDAO.findById(userId).map(
             _.map(u => {
@@ -112,12 +99,10 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
       val newUser: User = User(None, email, password, None)
       usersDAO.insert(newUser)
       val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
-      val loginRequest = FakeRequest(POST, userRoot + "/login").withJsonBody(newUserLoginJson)
-      val sessionMustContainEmail = (email: String) => (f: Future[Result]) => session(f).get("userEmail") mustBe Some(email)
-      sendFakeRequestAndMapResult(loginRequest, sessionMustContainEmail(email))
-      val logourRequest = FakeRequest(POST, userRoot + "/logout")
+      sendFakeRequestAndMapResult(loginRequest(newUserLoginJson), sessionMustContainKV("userEmail", email))
+      val logoutRequest = FakeRequest(POST, userRoot + "/logout")
       val sessionMustBeEmpty = (f: Future[Result]) => session(f) mustBe empty
-      sendFakeRequestAndMapResult(logourRequest, sessionMustBeEmpty)
+      sendFakeRequestAndMapResult(logoutRequest, sessionMustBeEmpty)
     }
 
     "should be able to delete his account" in {
@@ -135,10 +120,16 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
 
   }
 
-  def sendFakeRequestAndMapResult[T](req: FakeRequest[T], f: Future[Result] => Unit)(implicit w: Writeable[T]) = {
-    route(app, req).map(f)
+  val loginRequest = (userLoginJson: JsValue) => FakeRequest(POST, userRoot + "/login").withJsonBody(userLoginJson)
+  val sessionMustContainKV = (key: String, value: String) => (f: Future[Result]) => session(f).get(key) mustBe Some(value)
+  val statusMustBe = (status: Int) => (f: Future[Result]) => Await.result(f, Duration.Inf).header.status mustBe status
+  val redirectLocationMustBeSome = (location: String) => (f: Future[Result]) => redirectLocation(f) mustBe Some(location)
+  val flashMustBeSome = (flashName: String, flashContent: String) => (f: Future[Result]) => flash(f).get(flashName) mustBe Some(flashContent)
+  val contentMustInclude = (includee: String) => (f: Future[Result]) => contentAsString(f) must include(includee)
+  
+  def sendFakeRequestAndMapResult[T](req: FakeRequest[T], f: (Future[Result] => Unit)*)(implicit w: Writeable[T]) = {
+    route(app, req).map(result => f.foreach(_(result)))
   }
-    
 
   private val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
   def generateUpToElements[A] = (gen: Gen[A], upperBound: Int) =>
