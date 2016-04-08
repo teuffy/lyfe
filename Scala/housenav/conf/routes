@@ -15,7 +15,3 @@ GET       /users/profile    controllers.UserController.editProfile
 PUT       /users/:id        controllers.UserController.updateProfile(id: Long)
 POST      /users/logout     controllers.UserController.logout
 DELETE    /users            controllers.UserController.delete
-
-GET       /location/new     controllers.LocationController.create
-POST      /location         controllers.LocationController.save
-GET       /location         controllers.LocationController.list

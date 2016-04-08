@@ -1,26 +1,16 @@
 package controllers
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import dao.LocationsDAO
-import play.api.mvc.Controller
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.data.format.Formats._
-import models.Location
-import play.api.mvc.Action
 import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.i18n.I18nSupport
-import play.api.i18n.MessagesApi
-import models.User
-import play.api.mvc.AnyContent
-import play.mvc.BodyParser.Text
+
+import UserController.isAlphaNumericString
 import dao.UsersDAO
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import UserController._
-import play.api.mvc.Request
+import javax.inject.{ Inject, Singleton }
+import models.User
+import play.api.data.Form
+import play.api.data.Forms.{ email, longNumber, mapping, nonEmptyText, optional, text, tuple }
+import play.api.i18n.{ I18nSupport, MessagesApi }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.{ Action, AnyContent, Controller }
 
 @Singleton
 class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
