@@ -20,6 +20,7 @@ import dao.UsersDAO
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import UserController._
+import play.api.mvc.Request
 
 @Singleton
 class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
@@ -69,8 +70,7 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
   }
 
   def editProfile = IsAuthenticated { userData =>
-    _ =>
-      usersDAO.findByEmail(userData).map {
+    _ => usersDAO.findByEmail(userData).map {
         case Some(u) => Ok(views.html.editProfile(u.id.get, userForm.fill(u)))
         case _ => Forbidden
       }
@@ -105,10 +105,12 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
         case _ => Future(Forbidden)
       }}
 
+  
 }
 
 object UserController {
-  private def isAlphaNumericString: String => Boolean =
+  private val isAlphaNumericString: String => Boolean =
     (s: String) => s.matches("""(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(_|[^\w])).+""")
+ 
 }
 
