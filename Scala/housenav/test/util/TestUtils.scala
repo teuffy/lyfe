@@ -3,8 +3,22 @@ package util
 import org.scalacheck.Gen
 import scala.util.Random
 import org.scalacheck.Gen.const
+import scala.concurrent.{ Await, Future }
+import play.api.libs.json.JsValue
+import play.api.test.FakeRequest
+import scala.concurrent.duration.Duration
+import play.api.test.Helpers._
+import play.api.mvc.Result
+import org.scalatestplus.play.PlaySpec
 
-object TestUtil {
+object TestUtil extends PlaySpec {
+
+  val loginRequest = (userLoginJson: JsValue) => FakeRequest(POST, "/users/login").withJsonBody(userLoginJson)
+  val sessionMustContainKV = (key: String, value: String) => (f: Future[Result]) => session(f).get(key) mustBe Some(value)
+  val statusMustBe = (status: Int) => (f: Future[Result]) => Await.result(f, Duration.Inf).header.status mustBe status
+  val redirectLocationMustBeSome = (location: String) => (f: Future[Result]) => redirectLocation(f) mustBe Some(location)
+  val flashMustBeSome = (flashName: String, flashContent: String) => (f: Future[Result]) => flash(f).get(flashName) mustBe Some(flashContent)
+  val contentMustInclude = (includee: String) => (f: Future[Result]) => contentAsString(f) must include(includee)
 
   private val specialChars: Seq[Char] = Array('!', '@', '#', '$', '%', '^', '&', '*', '(', ')')
   def generateUpToElements[A] = (gen: Gen[A], upperBound: Int) =>

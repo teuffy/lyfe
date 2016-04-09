@@ -122,13 +122,6 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
 
   }
 
-  val loginRequest = (userLoginJson: JsValue) => FakeRequest(POST, userRoot + "/login").withJsonBody(userLoginJson)
-  val sessionMustContainKV = (key: String, value: String) => (f: Future[Result]) => session(f).get(key) mustBe Some(value)
-  val statusMustBe = (status: Int) => (f: Future[Result]) => Await.result(f, Duration.Inf).header.status mustBe status
-  val redirectLocationMustBeSome = (location: String) => (f: Future[Result]) => redirectLocation(f) mustBe Some(location)
-  val flashMustBeSome = (flashName: String, flashContent: String) => (f: Future[Result]) => flash(f).get(flashName) mustBe Some(flashContent)
-  val contentMustInclude = (includee: String) => (f: Future[Result]) => contentAsString(f) must include(includee)
-  
   def sendFakeRequestAndMapResult[T](req: FakeRequest[T], f: (Future[Result] => Unit)*)(implicit w: Writeable[T]) = {
     route(app, req).map(result => f.foreach(_(result)))
   }
