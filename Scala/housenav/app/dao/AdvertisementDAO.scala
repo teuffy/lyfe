@@ -1,8 +1,6 @@
 package dao
 
-import scala.Enumeration
-
-import models.{ Advertisement, PricePeriod, AdType, SellerType }
+import models.{ AdType, Advertisement, PricePeriod, SellerType }
 import models.AdType._
 import models.PricePeriod._
 import models.SellerType._
@@ -23,7 +21,7 @@ trait AdvertisementComponent { self: HasDatabaseConfigProvider[H2Driver] =>
     def sellerType = column[SellerType]("sellerType")
     def size = column[Int]("size")
     def * = (id.?, address, adType, price, pricePeriod, noOfRooms, sellerType, size) <> (Advertisement.tupled, Advertisement.unapply _)
-
+    
     implicit val AdTypeMapper = MappedColumnType.base[AdType, String](
       a => a.toString,
       s => AdType.withName(s))
