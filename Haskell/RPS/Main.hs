@@ -1,8 +1,9 @@
 module Main where
 
-import Data.Random.Extras
-import Data.Random.Source.DevRandom
-import Data.RVar
+import           Data.Maybe
+import           Data.Random.Extras
+import           Data.Random.Source.DevRandom
+import           Data.RVar
 
 data Hand = Rock | Scissors | Paper deriving (Eq, Show)
 instance Ord Hand where
@@ -10,7 +11,7 @@ instance Ord Hand where
     (>) Scissors Paper = True
     (>) Paper Rock = True
     (>) _ _ = False
-  
+
 possibleHands :: [Hand]
 possibleHands = [Rock, Paper, Scissors]
 
@@ -32,11 +33,35 @@ getHand input
     | input == "scissors" = Scissors
     | input == "paper" = Paper
 
-main :: IO ()
-main = do
+writeToDB :: Hand -> IO ()
+writeToDB hand
+   | hand == Rock = writeToDefaultDB "r"
+   | hand == Paper = writeToDefaultDB "p"
+   | hand == Scissors = writeToDefaultDB "s"
+    where
+     writeToDefaultDB :: String -> IO ()
+     writeToDefaultDB = appendFile "db"
+type Cache = (Maybe Char, Maybe Char, Maybe Char)
+superCache :: Cache -> Char -> Cache
+superCache (c0, c1, _) nc = (Just nc, c0, c1)
+
+calculateCompHand :: Cache -> IO Hand
+calculateCompHand (Nothing, _, _) = runRVar hand DevRandom
+calculateCompHand (Just a, _, _) = do
+    content <- readFile "db"
+    undefined
+
+
+play :: Cache -> IO ()
+play cache = do
     putStrLn "Choose rock, paper or scissors"
     userHand <- getLine
     compHand <- runRVar hand DevRandom
+    writeToDB $ getHand userHand
     putStrLn("You have chosen: " ++ userHand ++ " and computer ")
     print $ compHand
     print $ getHand userHand `playAgainst` compHand
+    play $ superCache cache $ head userHand
+
+main :: IO ()
+main = play (Nothing, Nothing, Nothing)
