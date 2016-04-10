@@ -4,6 +4,8 @@ import           Data.Maybe
 import           Data.Random.Extras
 import           Data.Random.Source.DevRandom
 import           Data.RVar
+import           Prelude hiding (appendFile, readFile, putStrLn, getLine, head)
+import           Data.ByteString
 
 data Hand = Rock | Scissors | Paper deriving (Eq, Show)
 instance Ord Hand where
@@ -41,15 +43,19 @@ writeToDB hand
     where
      writeToDefaultDB :: String -> IO ()
      writeToDefaultDB = appendFile "db"
-type Cache = (Maybe Char, Maybe Char, Maybe Char)
+type Cache = [Maybe Char]
 superCache :: Cache -> Char -> Cache
-superCache (c0, c1, _) nc = (Just nc, c0, c1)
+superCache (c0 : c1 : [_]) nc = (Just nc) : c0 : [c1]
 
 calculateCompHand :: Cache -> IO Hand
-calculateCompHand (Nothing, _, _) = runRVar hand DevRandom
-calculateCompHand (Just a, _, _) = do
+calculateCompHand cs = do
     content <- readFile "db"
+    return $ findSubstrings (catMaybes cs) content
     undefined
+-- runRVar hand DevRandom
+-- calculateCompHand (Just a, _, _) = do
+--  content <- readFile "db"
+--  undefined
 
 
 play :: Cache -> IO ()
@@ -64,4 +70,4 @@ play cache = do
     play $ superCache cache $ head userHand
 
 main :: IO ()
-main = play (Nothing, Nothing, Nothing)
+main = play [Nothing, Nothing, Nothing]
