@@ -6,7 +6,10 @@ author:         navaro1
 
 executable RPS
   hs-source-dirs:  src
-  main-is:         Main.hs
-  build-depends:   base >= 4
+  main-is:         .hs
+  build-depends:   base >= 4,
+                   random-extras,
+                   rvar,
+                   random-source
   ghc-options:     -Wall
 
