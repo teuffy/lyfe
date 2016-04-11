@@ -1,11 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import           Data.Maybe
 import           Data.Random.Extras
 import           Data.Random.Source.DevRandom
 import           Data.RVar
-import           Prelude hiding (appendFile, readFile, putStrLn, getLine, head)
-import           Data.ByteString
+import qualified Data.Text as T
+import Data.List
+import Data.Map.Strict
 
 data Hand = Rock | Scissors | Paper deriving (Eq, Show)
 instance Ord Hand where
@@ -46,12 +49,24 @@ writeToDB hand
 type Cache = [Maybe Char]
 superCache :: Cache -> Char -> Cache
 superCache (c0 : c1 : [_]) nc = (Just nc) : c0 : [c1]
+superCache _ _ = undefined
+
+groupIt :: String -> String -> Map Char Int -> Map Char Int
+groupIt key content accMap
+    | key `isInfixOf` content = groupIt key (tail content) (insertWith (+) (content !! 3) 1 accMap)
+    | otherwise = groupIt key (tail content) accMap
+
+-- checkIt :: Map Char Int -> Hand
+-- checkIt superMap = 
+--    foldlWithKey f 
+
 
 calculateCompHand :: Cache -> IO Hand
 calculateCompHand cs = do
     content <- readFile "db"
-    return $ findSubstrings (catMaybes cs) content
     undefined
+        where
+        sum = catMaybes cs
 -- runRVar hand DevRandom
 -- calculateCompHand (Just a, _, _) = do
 --  content <- readFile "db"
@@ -64,7 +79,6 @@ play cache = do
     userHand <- getLine
     compHand <- runRVar hand DevRandom
     writeToDB $ getHand userHand
-    putStrLn("You have chosen: " ++ userHand ++ " and computer ")
     print $ compHand
     print $ getHand userHand `playAgainst` compHand
     play $ superCache cache $ head userHand

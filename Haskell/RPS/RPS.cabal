@@ -5,11 +5,14 @@ build-type:     Simple
 author:         navaro1
 
 executable RPS
-  main-is:         .hs
+  hs-source-dirs:  
+  main-is:         Main.hs
   build-depends:   base >= 4,
                    random-extras,
                    rvar,
                    random-source,
-                   bytestring
+                   bytestring,
+                   text,
+                   containers
   ghc-options:     -Wall
 
