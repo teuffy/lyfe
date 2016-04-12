@@ -25,7 +25,6 @@ hand = choice(possibleHands)
 randomHand :: IO Hand
 randomHand = runRVar hand DevRandom
 
-
 playAgainst :: Hand -> Hand -> String
 playAgainst userHand compHand
     | userHand > compHand = "You have won"
@@ -44,13 +43,13 @@ writeHandToDB hand
    | hand == Paper = writeToDefaultDB "p"
    | hand == Scissors = writeToDefaultDB "s"
     where
-     writeToDefaultDB :: String -> IO ()
-     writeToDefaultDB = appendFile "db"
+        writeToDefaultDB :: String -> IO ()
+        writeToDefaultDB = appendFile "db"
 
 type Cache = [Maybe Char]
-lastThreePlays :: Cache -> Char -> Cache
-lastThreePlays (c0 : c1 : [_]) nc = (Just nc) : c0 : [c1]
-lastThreePlays _ _ = [Nothing, Nothing, Nothing] -- empty cache
+updateLastThreePlays :: Cache -> Char -> Cache
+updateLastThreePlays (c0 : c1 : [_]) nc = (Just nc) : c0 : [c1]
+updateLastThreePlays _ _ = [Nothing, Nothing, Nothing] -- empty cache
 
 getBeatingHand :: Hand -> Hand
 getBeatingHand hand
@@ -59,11 +58,8 @@ getBeatingHand hand
     | hand == Scissors = Rock
 
 groupIt :: String -> String -> Map Char Int -> Map Char Int
-
--- TODO: game beggining
 groupIt key content  accMap
-    | contentLength < 2 = accMap
-    | keyLength >= contentLength = accMap
+    | contentLength < 2 || keyLength >= contentLength = accMap
     | (reverse key) `isPrefixOf` content = groupIt key (tail content) (insertWith (+) (content !! keyLength) 1 accMap)
     | otherwise = groupIt key (tail content) accMap
 	where
@@ -100,7 +96,7 @@ play cache = do
     writeHandToDB $ getHand $ head userHand
     print $ compHand
     print $ getHand (head userHand) `playAgainst` compHand
-    play $ lastThreePlays cache  $ head userHand
+    play $ updateLastThreePlays cache  $ head userHand
 
 main :: IO ()
 main = play [Nothing, Nothing, Nothing]
