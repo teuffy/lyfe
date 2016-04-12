@@ -60,10 +60,13 @@ groupIt :: String -> String -> Map Char Int -> Map Char Int
 
 -- TODO: game beggining
 groupIt key content  accMap
-    | length content >= 4 && key `isInfixOf` content = groupIt key (tail content) (insertWith (+) (content !! 3) 1 accMap)
-    | length content < 4 = accMap
-    | length key < 3 = accMap
+    | contentLength < 2 = accMap
+    | keyLength >= contentLength = accMap
+    | contentLength > keyLength  && (reverse key) `isInfixOf` content = groupIt key (tail content) (insertWith (+) (content !! (1 + keyLength)) 1 accMap)
     | otherwise = groupIt key (tail content) accMap
+	where
+	 keyLength = length key
+         contentLength = length content
 
 checkIt :: Map Char Int -> IO Hand
 checkIt superMap = do
@@ -83,7 +86,6 @@ checkIt superMap = do
 calculateCompHand :: Cache -> IO Hand
 calculateCompHand cs = do
     content <- readFile "db"
-    print content
     checkIt $ groupIt stringCache content empty
         where
         stringCache = catMaybes cs
@@ -92,11 +94,8 @@ play :: Cache -> IO ()
 play cache = do
     putStrLn "Choose rock, paper or scissors"
     userHand <- getLine
-    print $ "1"
     compHand <- calculateCompHand cache
-    print $ "2"
     writeToDB $ getHand userHand
-    print $ "3"
     print $ compHand
     print $ getHand userHand `playAgainst` compHand
     play $ superCache cache $ head userHand
