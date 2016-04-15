@@ -22,7 +22,7 @@ trait AdvertisementComponent { self: HasDatabaseConfigProvider[H2Driver] =>
     def size = column[Int]("size")
     def * = (id.?, address, adType, price, pricePeriod, noOfRooms, sellerType, size) <> (Advertisement.tupled, Advertisement.unapply _)
     
-    implicit val AdTypeMapper = MappedColumnType.base[AdType, String](
+    implicit val AdTypeMapper= MappedColumnType.base[AdType, String](
       a => a.toString,
       s => AdType.withName(s))
 

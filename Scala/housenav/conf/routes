@@ -15,3 +15,8 @@ GET       /users/profile    controllers.UserController.editProfile
 PUT       /users/:id        controllers.UserController.updateProfile(id: Long)
 POST      /users/logout     controllers.UserController.logout
 DELETE    /users            controllers.UserController.delete
+
+# Postings
+
+GET       /postings/new     controllers.PostingController.createNewPostingForm
+POST      /postings         controllers.PostingController.savePosting

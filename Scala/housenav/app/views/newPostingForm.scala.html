@@ -1,0 +1,24 @@
+@(adForm: Form[Advertisement])(implicit messages: Messages)
+
+@import helper._
+
+    <h1>New User Form</h1>
+    @form(routes.PostingController.savePosting()) {
+        <fieldset>
+        @inputText(adForm("address"), '_label -> "address")
+        @select(adForm("adType"), 
+            options(AdType.values.toList.map(_.toString)),
+            '_label -> "property type")
+        @inputText(adForm("price"), '_label -> "price")
+        @select(adForm("pricePeriod"),
+            options(PricePeriod.values.toList.map(_.toString)),
+            '_label -> "Rent paid per")
+        @inputText(adForm("noOfRoms"), '_label -> "Number of rooms")
+        @select(adForm("sellerType"),
+            options(SellerType.values.toList.map(_.toString)),
+            '_label -> "direct or via agency")
+        @inputText(adForm("size"), '_label -> "size")
+        </fieldset>
+        
+    <input type="submit" value="Create account">
+    }
