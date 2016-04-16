@@ -1,20 +1,19 @@
 package controllers
 
-import javax.inject.{ Singleton, Inject}
-import play.api.i18n.I18nSupport
-import play.api.mvc.Controller
-import models.Advertisement
-import play.api.data._
-import play.api.data.Forms._
-import models.AdType
-import play.api.data.format.Formats._
-import play.api.mvc.Action
-import models.AdvertisementExtra
-import play.api.i18n.MessagesApi
-import play.api.mvc.AnyContent
+import scala.concurrent.Future
+
+import dao.AdvertisementsDAO
+import javax.inject.{ Inject, Singleton }
+import models.{ Advertisement, AdvertisementExtra }
+import play.api.data.Form
+import play.api.data.Forms.{ longNumber, mapping, number, of, optional, text }
+import play.api.data.format.Formats.doubleFormat
+import play.api.i18n.{ I18nSupport, MessagesApi }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.{ Action, AnyContent, Controller }
 
 @Singleton
-class PostingController @Inject() (val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
+class PostingController @Inject() (advertisementsDAO: AdvertisementsDAO, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
   //case class Advertisement(id: Option[Long], Address: String, adType: AdType, price: Double, pricePeriod: PricePeriod, noOfRooms: Int, sellerType: SellerType, size: Int)
   lazy val postingForm: Form[Advertisement] = Form(
       mapping(
@@ -32,5 +31,14 @@ class PostingController @Inject() (val messagesApi: MessagesApi) extends Control
     Ok(views.html.newPostingForm(postingForm))
   }
   
-  def savePosting: Action[AnyContent] = ???
+  def savePosting: Action[AnyContent] = Action.async { implicit request =>
+    postingForm.bindFromRequest.fold(
+      formWithErrors => {
+        Future(BadRequest(views.html.newPostingForm(formWithErrors)))
+      },
+      advertisement => {
+        advertisementsDAO.insert(advertisement)
+        Future(Redirect(routes.ApplicationController.index).flashing("success" -> "You have created account"))
+      })
+  }
 }
