@@ -38,7 +38,7 @@ class PostingController @Inject() (advertisementsDAO: AdvertisementsDAO, val mes
       },
       advertisement => {
         advertisementsDAO.insert(advertisement)
-        Future(Redirect(routes.ApplicationController.index).flashing("success" -> "You have created account"))
+        Future(Redirect(routes.ApplicationController.index).flashing("success" -> "You have created posting"))
       })
   }
 }
