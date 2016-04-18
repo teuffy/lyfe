@@ -24,7 +24,8 @@ class PostingController @Inject() (advertisementsDAO: AdvertisementsDAO, val mes
           "pricePeriod" -> text,
           "noOfRooms" -> number,
           "sellerType" -> text,
-          "size" -> number
+          "size" -> number,
+          "userId" -> optional(longNumber)
       )(AdvertisementExtra.applyFromForm)(AdvertisementExtra.unapplyFromForm))
       
   def createNewPostingForm = Action {

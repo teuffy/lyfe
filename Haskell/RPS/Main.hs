@@ -18,7 +18,7 @@ randomHand :: IO Hand
 randomHand = runRVar handChoice DevRandom
     where
         handChoice = choice(possibleHands)
-
+-- maybe remove io here?
 performPlay :: Hand -> Hand -> IO ()
 performPlay userHand compHand = do
     print $ "You've played: " ++ show userHand
@@ -79,7 +79,7 @@ getBeatingHand inHand
     | inHand == Paper = Scissors
     | inHand == Scissors = Rock
     | otherwise = undefined
-
+-- remove io here
 getHandOccurencesBasedOnCache :: String -> IO (Map Hand Int)
 getHandOccurencesBasedOnCache cache = do
     content <- getDatabaseContent
@@ -93,7 +93,7 @@ getHandOccurencesBasedOnCache cache = do
             where
                 keyLength = length key
                 contentLength = length content
-
+-- remove io heres
 chooseBestHand :: Map Hand Int -> IO Hand
 chooseBestHand nextHandOccurences = do
     go Nothing $ toList nextHandOccurences
@@ -116,14 +116,14 @@ chooseBestHand nextHandOccurences = do
         go Nothing ((h, n) : cns) = go (Just (h, n)) cns
         selectRandomHandFromEqOccurences :: Hand -> Hand -> IO Hand
         selectRandomHandFromEqOccurences h1 h2 = runRVar (choice [h1, h2]) DevRandom
-
+-- try to remove io here
 calculateAIHand :: Cache -> IO Hand
 calculateAIHand cs = do
     nextHandOccurences <- getHandOccurencesBasedOnCache cacheValue
     chooseBestHand nextHandOccurences
         where
         cacheValue = catMaybes cs
--- TODO: Validation!
+
 getAndValidateUserHand :: IO Hand
 getAndValidateUserHand = do
     putStrLn "Choose (r)ock, (p)aper or (s)cissors"
