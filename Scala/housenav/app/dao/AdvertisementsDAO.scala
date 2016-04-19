@@ -10,6 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import slick.driver.H2Driver
 import slick.lifted.ProvenShape.proveShapeOf
 import scala.concurrent.Future
+import models.User
 
 trait AdvertisementComponent { self: HasDatabaseConfigProvider[H2Driver] =>
   import driver.api._
@@ -49,5 +50,9 @@ class AdvertisementsDAO @Inject() (protected val dbConfigProvider: DatabaseConfi
   
   def insert(advertisement: Advertisement): Future[Int] = {
     db.run(Advertisements += advertisement)
+  }
+  def insertForUser(ad: Advertisement, user: User): Future[Int] = {
+    val adWithUser = Advertisement(ad.id, ad.address, ad.adType, ad.price, ad.pricePeriod, ad.noOfRooms, ad.sellerType, ad.size, user.id)
+    db.run(Advertisements += adWithUser)
   }
 }
