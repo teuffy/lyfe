@@ -1,13 +1,8 @@
 package authorization
 
-import util.TestUtil._
-
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
-import scala.util.Random
 
-import org.scalacheck._
-import org.scalacheck.Gen._
 import org.scalatest.prop.PropertyChecks
 import org.scalatestplus.play.{ OneAppPerTest, PlaySpec }
 
@@ -21,6 +16,7 @@ import play.api.libs.json.{ JsValue, Json }
 import play.api.mvc.Result
 import play.api.test._
 import play.api.test.Helpers._
+import util.TestUtil.{ contentMustInclude, flashMustBeSome, loginRequest, properEmails, properNames, properPasswordsUpTo, redirectLocationMustBeSome, sessionMustContainKV, statusMustBe }
 
 class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest {
 

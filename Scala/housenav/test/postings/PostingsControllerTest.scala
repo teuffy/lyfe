@@ -1,20 +1,26 @@
 package postings
 
 import scala.concurrent.Future
-
 import org.scalatest.prop.PropertyChecks
 import org.scalatestplus.play.{ OneAppPerTest, PlaySpec }
-
 import dao.{ AdvertisementsDAO, UsersDAO }
 import javax.inject.Singleton
 import models.User
 import play.api.Application
 import play.api.http.Writeable
 import play.api.libs.json.{ JsValue, Json }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Result
 import play.api.test._
 import play.api.test.Helpers._
 import util.TestUtil._
+import org.scalacheck.Gen
+import models.AdType
+import models.PricePeriod
+import models.SellerType
+import models.PricePeriod._
+import models.SellerType._
+import models.AdType._
 
 class PostingsControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest {
 
@@ -46,14 +52,19 @@ class PostingsControllerTest extends PlaySpec with PropertyChecks with OneAppPer
       val password = "Test!234"
       val newUser: User = User(None, email, password, None)
       usersDAO.insert(newUser)
-      val newUserLoginJson: JsValue = Json.parse(s"""{"email":"$email", "password":"$password"}""")
-      sendFakeRequestAndMapResult(loginRequest(newUserLoginJson), sessionMustContainKV("userEmail", email))
-      val newPostingRequest: JsValue = Json.parse("""{"address":"sample address", "adType":"flat", "price": 1245.66, "pricePeriod": "daily", "noOfRooms": 1, "sellerType": "direct", "size": 64}""")
-      val fakeRequestWithSession = FakeRequest(POST, postingsRoot)
-        .withJsonBody(newPostingRequest)
-        .withSession("userEmail" -> email, "isLogged" -> "true")
-      sendFakeRequestAndMapResult(fakeRequestWithSession, 
-          statusMustBe(SEE_OTHER), redirectLocationMustBeSome("/"), flashMustBeSome("success", "You have created posting"))
+      forAll(Gen.numStr.suchThat(_.length > 0), enumGen(AdType), Gen.posNum[Double], enumGen(PricePeriod), Gen.posNum[Int], enumGen(SellerType)) {
+        (address: String, adType: AdType, price: Double, pricePeriod: PricePeriod, n: Int, sellerType: SellerType) =>
+          {
+            val newPostingRequest: JsValue = Json.parse(
+                s"""{"address":"$address", "adType":"$adType", "price": $price, "pricePeriod": "$pricePeriod", "noOfRooms": $n, "sellerType": "$sellerType", "size": $n}""""
+                )
+            val fakeRequestWithSession = FakeRequest(POST, postingsRoot)
+              .withJsonBody(newPostingRequest)
+              .withSession("userEmail" -> email, "isLogged" -> "true")
+            sendFakeRequestAndMapResult(fakeRequestWithSession,
+              statusMustBe(SEE_OTHER), redirectLocationMustBeSome("/"), flashMustBeSome("success", "You have created posting"))
+          }
+      }
     }
 
   }

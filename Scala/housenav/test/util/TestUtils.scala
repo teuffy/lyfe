@@ -1,15 +1,19 @@
 package util
 
-import org.scalacheck.Gen
-import scala.util.Random
-import org.scalacheck.Gen.const
 import scala.concurrent.{ Await, Future }
-import play.api.libs.json.JsValue
-import play.api.test.FakeRequest
 import scala.concurrent.duration.Duration
-import play.api.test.Helpers._
-import play.api.mvc.Result
+import scala.util.Random
+
+import org.scalacheck._
+import org.scalacheck.Gen._
 import org.scalatestplus.play.PlaySpec
+
+import models.AdType
+import models.AdType._
+import play.api.libs.json.JsValue
+import play.api.mvc.Result
+import play.api.test._
+import play.api.test.Helpers._
 
 object TestUtil extends PlaySpec {
 
@@ -51,4 +55,7 @@ object TestUtil extends PlaySpec {
     .flatMap(_ + "@test.com")
 
   val properNames: Gen[String] = Gen.alphaStr
+  
+  def enumGen[T <: Enumeration](enum: T): Gen[enum.Value] = Gen.oneOf(enum.values.toSeq)
+  
 }
