@@ -79,11 +79,10 @@ getBeatingHand inHand
     | inHand == Paper = Scissors
     | inHand == Scissors = Rock
     | otherwise = undefined
--- remove io here
-getHandOccurencesBasedOnCache :: String -> IO (Map Hand Int)
-getHandOccurencesBasedOnCache cache = do
-    content <- getDatabaseContent
-    return $ go cache content empty
+
+getHandOccurencesBasedOnCache :: String -> String -> Map Hand Int
+getHandOccurencesBasedOnCache cache content = do
+    go cache content empty
     where
         go :: String -> String -> Map Hand Int -> Map Hand Int
         go key content accMap
@@ -93,7 +92,8 @@ getHandOccurencesBasedOnCache cache = do
             where
                 keyLength = length key
                 contentLength = length content
--- remove io heres
+
+-- remove io here (?)
 chooseBestHand :: Map Hand Int -> IO Hand
 chooseBestHand nextHandOccurences = do
     go Nothing $ toList nextHandOccurences
@@ -116,14 +116,14 @@ chooseBestHand nextHandOccurences = do
         go Nothing ((h, n) : cns) = go (Just (h, n)) cns
         selectRandomHandFromEqOccurences :: Hand -> Hand -> IO Hand
         selectRandomHandFromEqOccurences h1 h2 = runRVar (choice [h1, h2]) DevRandom
--- try to remove io here
-calculateAIHand :: Cache -> IO Hand
-calculateAIHand cs = do
-    nextHandOccurences <- getHandOccurencesBasedOnCache cacheValue
-    chooseBestHand nextHandOccurences
+
+calculateAIHand :: Cache -> String -> IO Hand
+calculateAIHand cs dbContent = do
+    chooseBestHand $ getHandOccurencesBasedOnCache cacheValue dbContent
         where
         cacheValue = catMaybes cs
 
+-- validation missing
 getAndValidateUserHand :: IO Hand
 getAndValidateUserHand = do
     putStrLn "Choose (r)ock, (p)aper or (s)cissors"
@@ -134,7 +134,8 @@ getAndValidateUserHand = do
 
 playRound :: Cache -> IO ()
 playRound cache = do
-    aiHand <- calculateAIHand cache
+    content <- getDatabaseContent
+    aiHand <- calculateAIHand cache content
     userHand <- getAndValidateUserHand
     userHand `performPlay` aiHand
     playRound $ updateLastThreePlays cache userHand
