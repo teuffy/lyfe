@@ -121,7 +121,7 @@ chooseBestHand nextHandOccurences = do
         selectRandomHandFromEqOccurences h1 h2 = runRVar (choice [h1, h2]) DevRandom
 
 calculateAIHand :: Cache -> String -> IO Hand
-calculateAIHand cs dbContent = d
+calculateAIHand cs dbContent = do
     chooseBestHand $ getHandOccurencesBasedOnCache cacheValue dbContent
         where
         cacheValue = catMaybes cs
