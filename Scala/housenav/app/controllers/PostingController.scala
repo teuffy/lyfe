@@ -14,7 +14,7 @@ import dao.UsersDAO
 import models.User
 
 @Singleton
-class PostingController @Inject() (advertisementsDAO: AdvertisementsDAO, usersDAO: UsersDAO, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
+class PostingController @Inject() (advertisementsDAO: AdvertisementsDAO, utils: ControllerUtils, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
   lazy val postingForm: Form[Advertisement] = Form(
     mapping(
       "id" -> optional(longNumber),
@@ -38,16 +38,11 @@ class PostingController @Inject() (advertisementsDAO: AdvertisementsDAO, usersDA
           Future(BadRequest(views.html.newPostingForm(formWithErrors)))
         },
         advertisement => {
-          performWithUser {
+          utils.performWithUser {
             (user: User) =>
               advertisementsDAO.insertForUser(advertisement, user)
-              Redirect(routes.ApplicationController.index).flashing("success" -> "You have created posting")
+              Future(Redirect(routes.ApplicationController.index).flashing("success" -> "You have created posting"))
           }
         })
-  }
-
-  def performWithUser[S](f: User => play.api.mvc.Result)(implicit userEmail: String) = usersDAO.findByEmail(userEmail).map {
-    case None => Forbidden
-    case Some(user) => f(user)
   }
 }

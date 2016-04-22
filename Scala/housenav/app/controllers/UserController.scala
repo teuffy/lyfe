@@ -1,7 +1,6 @@
 package controllers
 
 import scala.concurrent.Future
-
 import UserController.isAlphaNumericString
 import dao.UsersDAO
 import javax.inject.{ Inject, Singleton }
@@ -11,9 +10,10 @@ import play.api.data.Forms.{ email, longNumber, mapping, nonEmptyText, optional,
 import play.api.i18n.{ I18nSupport, MessagesApi }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{ Action, AnyContent, Controller }
+import play.api.mvc.Results
 
 @Singleton
-class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
+class UserController @Inject() (usersDAO: UsersDAO, utils: ControllerUtils, val messagesApi: MessagesApi) extends Controller with I18nSupport with Secured {
   lazy val userForm: Form[User] = Form(
     mapping(
       "id" -> optional(longNumber),
@@ -61,9 +61,9 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
 
   def editProfile = IsAuthenticated { userData =>
     _ => usersDAO.findByEmail(userData).map {
-        case Some(u) => Ok(views.html.editProfile(u.id.get, userForm.fill(u)))
-        case _ => Forbidden
-      }
+      case Some(u) => Ok(views.html.editProfile(u.id.get, userForm.fill(u)))
+      case _ => Forbidden
+    }
   }
 
   def updateProfile(id: Long) =
@@ -83,24 +83,23 @@ class UserController @Inject() (usersDAO: UsersDAO, val messagesApi: MessagesApi
   }
 
   def delete =
-    IsAuthenticated { userData =>
-      _ => usersDAO.findByEmail(userData).flatMap {
-        case Some(u) => usersDAO.delete(u.id.get).map {
-          case 1 =>
-            Redirect(routes.ApplicationController.index)
-              .flashing("success" -> "you have deleted your account")
-              .withNewSession
-          case _ => BadRequest
-        }
-        case _ => Future(Forbidden)
-      }}
+    IsAuthenticated { implicit userEmail =>
+      _ => utils.performWithUser { user =>
+          usersDAO.delete(user.id.get).map {
+            case 1 =>
+              Redirect(routes.ApplicationController.index)
+                .flashing("success" -> "you have deleted your account")
+                .withNewSession
+            case _ => BadRequest
+          }
+      }
+    }
 
-  
 }
 
 object UserController {
   private val isAlphaNumericString: String => Boolean =
     (s: String) => s.matches("""(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(_|[^\w])).+""")
- 
+
 }
 

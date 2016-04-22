@@ -56,8 +56,7 @@ class PostingsControllerTest extends PlaySpec with PropertyChecks with OneAppPer
         (address: String, adType: AdType, price: Double, pricePeriod: PricePeriod, n: Int, sellerType: SellerType) =>
           {
             val newPostingRequest: JsValue = Json.parse(
-                s"""{"address":"$address", "adType":"$adType", "price": $price, "pricePeriod": "$pricePeriod", "noOfRooms": $n, "sellerType": "$sellerType", "size": $n}""""
-                )
+              s"""{"address":"$address", "adType":"$adType", "price": $price, "pricePeriod": "$pricePeriod", "noOfRooms": $n, "sellerType": "$sellerType", "size": $n}"""")
             val fakeRequestWithSession = FakeRequest(POST, postingsRoot)
               .withJsonBody(newPostingRequest)
               .withSession("userEmail" -> email, "isLogged" -> "true")
@@ -68,7 +67,5 @@ class PostingsControllerTest extends PlaySpec with PropertyChecks with OneAppPer
     }
 
   }
-  def sendFakeRequestAndMapResult[T](req: FakeRequest[T], f: (Future[Result] => Unit)*)(implicit w: Writeable[T]) = {
-    route(app, req).map(result => f.foreach(_(result)))
-  }
+
 }

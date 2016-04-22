@@ -1,7 +1,6 @@
 package dao
 
 import scala.concurrent.Future
-
 import javax.inject.{ Inject, Singleton }
 import models.User
 import play.api.db.slick.{ DatabaseConfigProvider, HasDatabaseConfigProvider }
@@ -21,11 +20,13 @@ trait UserComponent { self: HasDatabaseConfigProvider[H2Driver] =>
 }
 
 @Singleton
-class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider) extends UserComponent
+class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider) extends UserComponent with AdvertisementComponent
     with HasDatabaseConfigProvider[H2Driver] {
   import driver.api._
 
   private val Users = TableQuery[Users]
+  private val Advertisements = TableQuery[Advertisements]
+
   db.run((Users.schema).create)
 
   def insert(user: User): Future[Int] = {
@@ -46,9 +47,8 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
   def findById(id: Long): Future[Option[User]] =
     db.run(Users.filter(_.id === id).result.headOption)
 
-  def findByEmail(email: String): Future[Option[User]] = {
+  def findByEmail(email: String): Future[Option[User]] =
     db.run(Users.filter(_.email === email).result.headOption)
-  }
 
   def authenticate(email: String, password: String): Future[Boolean] =
     db.run(Users.filter(u => u.email === email && u.password === password).result.headOption).map(!_.isEmpty)
@@ -56,8 +56,10 @@ class UsersDAO @Inject() (protected val dbConfigProvider: DatabaseConfigProvider
   def deleteAll =
     db.run(Users.delete)
 
-  def delete(id: Long) = {
+  def delete(id: Long) =
     db.run(Users.filter(_.id === id).delete)
-  }
+
+  def getUserPostings(id: Long) =
+    Users.join(Advertisements).on(_.id === _.userId).map { case (u, a) => a }.result
 
 }

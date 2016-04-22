@@ -16,7 +16,7 @@ import play.api.libs.json.{ JsValue, Json }
 import play.api.mvc.Result
 import play.api.test._
 import play.api.test.Helpers._
-import util.TestUtil.{ contentMustInclude, flashMustBeSome, loginRequest, properEmails, properNames, properPasswordsUpTo, redirectLocationMustBeSome, sessionMustContainKV, statusMustBe }
+import util.TestUtil._
 
 class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest {
 
@@ -117,9 +117,4 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
     }
 
   }
-
-  def sendFakeRequestAndMapResult[T](req: FakeRequest[T], f: (Future[Result] => Unit)*)(implicit w: Writeable[T]) = {
-    route(app, req).map(result => f.foreach(_(result)))
-  }
-
 }
