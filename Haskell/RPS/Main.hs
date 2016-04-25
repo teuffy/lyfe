@@ -50,7 +50,7 @@ deserializeHand inputChar
     | inputChar == 'r' = Rock
     | inputChar == 's' = Scissors
     | inputChar == 'p' = Paper
-    | otherwise = error "Non-existing serialized Hand passed"
+    | otherwise = error $ "Non-existing serialized Hand passed: " ++ [inputChar]
 
 serializeHand :: Hand -> Char
 serializeHand inputHand
@@ -68,6 +68,7 @@ writeHandToDB h = writeCharToDefaultDB $ serializeHand h
         writeCharToDefaultDB :: Char -> IO ()
         writeCharToDefaultDB c = appendFile "db" [c]
 
+-- it could be a simple list instead of maybes.
 type Cache = [Maybe Char]
 updateLastThreePlays :: Cache -> Hand -> Cache
 updateLastThreePlays (c0 : c1 : [_]) nc = (Just $ serializeHand nc) : c0 : [c1]
@@ -80,7 +81,9 @@ getBeatingHand inHand
     | inHand == Scissors = Rock
     | otherwise = undefined
 
+-- type alias or data type?
 getHandOccurencesBasedOnCache :: String -> String -> Map Hand Int
+
 getHandOccurencesBasedOnCache cache content = do
     go cache content empty
     where
@@ -127,10 +130,9 @@ calculateAIHand cs dbContent = do
 getAndValidateUserHand :: IO Hand
 getAndValidateUserHand = do
     putStrLn "Choose (r)ock, (p)aper or (s)cissors"
-    userChar <- getChar
-    writeHandToDB $ deserializeHand $ userChar
-    return $ deserializeHand $ userChar
-
+    userChar <- getLine
+    writeHandToDB $ deserializeHand $ head userChar
+    return $ deserializeHand $ head userChar
 
 playRound :: Cache -> IO ()
 playRound cache = do
