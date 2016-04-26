@@ -72,7 +72,7 @@ class UserControllerTest extends PlaySpec with PropertyChecks with OneAppPerTest
           val newUser: User = User(None, email, password, None)
           val userId = Await.result(usersDAO.insert(newUser), Duration.Inf)
           val updateUserJson: JsValue = Json.parse(s"""{"id": "$userId", "email":"new$email", "password":"new$password", "name":"$name"}""")
-          val fakeRequestWithSession = FakeRequest(PUT, userRoot + s"/$userId")
+          val fakeRequestWithSession = FakeRequest(PUT, "/user" + s"/$userId")
             .withJsonBody(updateUserJson)
             .withSession("userEmail" -> email, "isLogged" -> "true")
 

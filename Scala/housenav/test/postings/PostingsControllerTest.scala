@@ -52,6 +52,7 @@ class PostingsControllerTest extends PlaySpec with PropertyChecks with OneAppPer
       val password = "Test!234"
       val newUser: User = User(None, email, password, None)
       usersDAO.insert(newUser)
+
       forAll(Gen.numStr.suchThat(_.length > 0), enumGen(AdType), Gen.posNum[Double], enumGen(PricePeriod), Gen.posNum[Int], enumGen(SellerType)) {
         (address: String, adType: AdType, price: Double, pricePeriod: PricePeriod, n: Int, sellerType: SellerType) =>
           {
